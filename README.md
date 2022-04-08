@@ -1,3 +1,8 @@
+# Installation 
+
+	pip install Mixture-Models
+
+
 # Mixture Models
 This package implements the following mixture models 
 
@@ -103,7 +108,7 @@ Refer the notebook in examples folder for an illustration.
 
     params_store = model.fit(initial_params,"<optimizers_name>") ## optimizers_name can be Netwon-CG, adam,rms_prop, grad_descent
 
-The details about each optimizer and its optional input parameters are given in the PDF.  The output of `fit` method is the set of all points in the 
+The details about each optimizer and its optional input parameters are given in the PDF in the 'Examples' folder.  The output of `fit` method is the set of all points in the 
 parameter space
 that the optimizer has traversed during the optimization i.e.  list of parameters with the final entry in the list being the final 
 fitted solution. We have a detailed notebook 'Optimizers_illustration.ipynb' in the 'Examples' folder on Github.  
