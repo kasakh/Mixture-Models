@@ -1,2 +1,9 @@
 include versioneer.py
 include Mixture_Models/_version.py
+include README.md
+include LICENSE
+include requirements.txt
+graft is_number
+recursive-exclude * *.py[co]
+include versioneer.py
+include is_number/_version.py
