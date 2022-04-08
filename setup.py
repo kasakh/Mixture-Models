@@ -1,4 +1,3 @@
-
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -22,6 +21,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.9',
+    python_requires=">=3.9",
     install_requires=requirements,
 )
