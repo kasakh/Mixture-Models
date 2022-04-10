@@ -2,6 +2,7 @@
 
 	pip install Mixture-Models
 
+The github repo with illustration notebooks can be found [here](https://github.com/kasakh/Mixture-Models).
 
 # Mixture Models
 This package implements the following mixture models 
@@ -95,10 +96,10 @@ dictionary. Here is a sample output for the `initial_params`
     {'log proportions': array([ 0.66579325,  0.35763949, -0.77270015]), 
     'means': array([[-0.00419192,  0.31066799],
            [-0.36004278,  0.13275579],
-           [ 0.05427426,  0.00214572]]), 'lower triangles': array([[1., 0.],
+           [ 0.05427426,  0.00214572]]), 'sqrt_covs': array([[1., 0.],
            [0., 1.]])}
 
-As you can see, we have `log proportions` (instead of proportions of each component) and `lower triangles` (instead of the covariance matrices).
+As you can see, we have `log proportions` (instead of proportions of each component) and `sqrt_covs` (instead of the covariance matrices).
 
 Once the `initial_params` have been defined, we can manually change it to K-Means initialization or any other user-specified initialization.
 Refer the notebook in examples folder for an illustration. 
@@ -113,7 +114,7 @@ parameter space
 that the optimizer has traversed during the optimization i.e.  list of parameters with the final entry in the list being the final 
 fitted solution. We have a detailed notebook 'Optimizers_illustration.ipynb' in the 'Examples' folder on Github.  
 
-### Post-hoc Analysis
+## Post-hoc Analysis
 Once the list of parameters are obtained, we can perform post-hoc analysis as follows:
 
     for params in params_store:

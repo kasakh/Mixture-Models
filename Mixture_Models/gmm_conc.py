@@ -13,12 +13,12 @@ class GMM_Constrainted(GMM):
         return {
             "log proportions": np.random.randn(num_components) * scale,
             "means": np.random.randn(num_components, D) * scale,
-            "lower triangles": np.zeros((D, D)) + np.eye(D),
+            "sqrt_covs": np.zeros((D, D)) + np.eye(D),
         }
 
     def unpack_params(self, params):
         normalized_log_proportions = self.log_normalize(params["log proportions"])
         lower_triangles = np.array(
-            [params["lower triangles"]] * np.size(normalized_log_proportions)
+            [params["sqrt_covs"]] * np.size(normalized_log_proportions)
         )
         return normalized_log_proportions, params["means"], lower_triangles

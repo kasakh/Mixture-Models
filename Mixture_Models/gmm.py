@@ -30,12 +30,12 @@ class GMM(MM):
         return {
             "log proportions": np.random.randn(num_components) * scale,
             "means": np.random.randn(num_components, D) * scale,
-            "lower triangles": np.zeros((num_components, D, D)) + np.eye(D),
+            "sqrt_covs": np.zeros((num_components, D, D)) + np.eye(D),
         }
 
     def unpack_params(self, params):
         normalized_log_proportions = self.log_normalize(params["log proportions"])
-        return normalized_log_proportions, params["means"], params["lower triangles"]
+        return normalized_log_proportions, params["means"], params["sqrt_covs"]
 
     def aic(self, params):
         return 2 * self.num_freeparam + 2 * self.alt_objective(params)

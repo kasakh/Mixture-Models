@@ -339,7 +339,14 @@ class MM(object):
                 beta2 = optim_params["beta2"]
         else:
             beta2 = 0.999
-
+        
+        if "gamma" in optim_params:
+            if self.rate_checker("gamma", optim_params["gamma"]):
+                gamma = optim_params["gamma"]
+        else:
+            gamma = 0.9
+        
+        
         if "maxiter" in optim_params:
             if isinstance(optim_params["maxiter"], int) and optim_params["maxiter"] > 0:
                 maxiter = optim_params["maxiter"]
@@ -388,8 +395,7 @@ class MM(object):
                 flattened_params,
                 grad(flattened_obj),
                 learning_rate=learning_rate,
-                beta1=beta1,
-                beta2=beta2,
+                gamma = gamma,
                 eps=1e-5,
                 startiter=0,
                 maxiter=maxiter,
