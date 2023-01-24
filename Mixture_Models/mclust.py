@@ -87,7 +87,7 @@ class Mclust(MM):
 
 
 
-    def mclust_likelihood(self, params):
+    def likelihood(self, params):
         "returns the likelihood of mclust"
         cluster_lls = []
         for log_proportion, mean, shape, orientation, volume in zip(*self.unpack_params(params)):
@@ -97,7 +97,7 @@ class Mclust(MM):
         return np.sum(logsumexp(np.vstack(cluster_lls),axis=0))
 
     def objective(self, params):
-        return -self.mclust_likelihood(params)
+        return -self.likelihood(params)
 
 
     def aic(self, params):

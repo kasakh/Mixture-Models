@@ -1,6 +1,5 @@
 from .gmm import *
-#import scipy.stats.multivariate_t as mvt
-from scipy.special import gammaln
+from autograd.scipy.special import gammaln
 
 class TMM(GMM):
     def init_params(self, num_components, scale=1.0):
@@ -26,8 +25,7 @@ class TMM(GMM):
     def likelihood(self, params):
         cluster_lls = []
         for log_proportion, mean, cov_sqrt, dof in zip(*self.unpack_params(params)):
-            #logpdf = mvt.logpdf(self.data, mean, cov_sqrt.T @ cov_sqrt, dof)
-            D = mean.shape[1]
+            D = len(mean)
             logpdf = gammaln((dof+D)/2)-gammaln(dof/2)-0.5*np.log(np.linalg.det(np.pi*dof*cov_sqrt.T @ cov_sqrt)) - 0.5*(dof+D)*np.log(1+np.sum(((self.data-mean)@np.linalg.inv(cov_sqrt))**2,axis=1)/dof)
             cluster_lls.append(log_proportion + logpdf)
         return np.sum(logsumexp(np.vstack(cluster_lls),axis=0))
@@ -45,12 +43,11 @@ class TMM(GMM):
         return np.log(
             self.num_datapoints
         ) * self.num_freeparam + 2 * self.objective(params)
-
+    
     def labels(self, data, params_store):
         cluster_lls = []
         for log_proportion, mean, cov_sqrt, dof in zip(*self.unpack_params(params_store)):
-            #logpdf = mvt.logpdf(data, mean, cov_sqrt.T @ cov_sqrt, dof)
-            D = mean.shape[1]
+            D = len(mean)
             logpdf = gammaln((dof+D)/2)-gammaln(dof/2)-0.5*np.log(np.linalg.det(np.pi*dof*cov_sqrt.T @ cov_sqrt)) - 0.5*(dof+D)*np.log(1+np.sum(((data-mean)@np.linalg.inv(cov_sqrt))**2,axis=1)/dof)
             cluster_lls.append(log_proportion + logpdf)
         return np.argmax(np.array(cluster_lls).T,axis=1)
