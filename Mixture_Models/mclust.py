@@ -1,4 +1,5 @@
 from .mixture_models import *
+import autograd.numpy as np
 
 class Mclust(MM):
     def __init__(self, data, constraint="VVV"):
@@ -72,7 +73,9 @@ class Mclust(MM):
         elif self.constraint[1] == 'E':
             shapes = np.zeros((num_components,D,D)) + np.diag(np.exp(params["shapes"]-np.sum(params["shapes"])/D))
         elif self.constraint[1] == 'V':
-            shapes = np.apply_along_axis(np.diag,-1,np.exp(params["shapes"]-np.sum(params["shapes"])/D))
+            #shapes = np.apply_along_axis(np.diag,-1,1.0*np.exp(params["shapes"]-np.sum(params["shapes"])/D))
+            diags = [np.diag(row) for row in np.exp(params["shapes"]-np.sum(params["shapes"])/D)]
+            shapes = np.array(diags)
 
         if self.constraint[2] == 'I':
             orientations = np.zeros((num_components,D,D)) + np.eye(D)

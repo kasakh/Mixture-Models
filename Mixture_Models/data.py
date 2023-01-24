@@ -6,8 +6,7 @@ import autograd.numpy as np
 import autograd.numpy.random as npr
 from .data_mnist import *
 
-from sklearn.datasets._base import load_csv_data
-
+import csv
 
 def load_mnist():
     partial_flatten = lambda x: np.reshape(x, (x.shape[0], np.prod(x.shape[1:])))
@@ -90,4 +89,17 @@ def make_pinwheel(
     return np.einsum("ti,tij->tj", features, rotations)
 
 def load_csvdataset(file="iris"):
-    return load_csv_data("datasets/"+file+".csv")[0]
+    #adapted from sklearn.datasets._base.load_csv_data
+    maindir = os.path.join(os.path.dirname(__file__),'datasets')
+    with open(os.path.join(maindir,file+".csv")) as csv_file:
+        data_file = csv.reader(csv_file)
+        temp = next(data_file)
+        n_samples = int(temp[0])
+        n_features = int(temp[1])
+        target_names = np.array(temp[2:])
+        data = np.empty((n_samples,n_features))
+        for i,ir in enumerate(data_file):
+            data[i] = np.asarray(ir[:-1],dtype=np.float64)
+        return data
+
+    return load_csv_data(+file+".csv",data_module=maindir)[0]

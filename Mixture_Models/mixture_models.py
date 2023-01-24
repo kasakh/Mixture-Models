@@ -9,7 +9,7 @@ from scipy.optimize import minimize
 from autograd.scipy.special import logsumexp
 import autograd.scipy.stats.multivariate_normal as mvn
 from autograd.misc.flatten import flatten_func
-from .data import make_pinwheel
+from .data import *
 from scipy import linalg
 from sklearn.metrics.cluster import adjusted_rand_score
 from scipy.optimize import OptimizeResult
