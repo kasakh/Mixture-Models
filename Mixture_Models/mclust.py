@@ -17,10 +17,13 @@ class Mclust(MM):
     def init_params(self, num_components, scale=1.0):
         '''
         Mclust parametrization reference: https://sites.stat.washington.edu/raftery/Research/PDF/fraley2003.pdf#page=3
-        'volumes' = log lambda (or log lambda_k)
-        'shapes' = log (diag A) (or log diag A_k) (n.b. product of diagonal elements must = 1)
-        'orientations' = Cayley parametrization of the orthogonal matrix D (or D_k) of eigenvectors: https://planetmath.org/cayleysparameterizationoforthogonalmatrices.
-        WLOG we may assume all its eigenvalues are +1 rather than -1; otherwise we could just multiply -1 to each eigenvector row/column (by multiplying with the appropriate elementary matrix E, once on the left and once on the right, i.e. DAD^T |-> D'EAED'^T = D'AD'^T).
+        'log volumes' = log lambda (or log lambda_k)
+        'log shapes' = log (diag A) (or log diag A_k) (n.b. product of diagonal elements must = 1)
+        'orientations' = Cayley parametrization of the orthogonal matrix D (or D_k) of eigenvectors
+        (see https://planetmath.org/cayleysparameterizationoforthogonalmatrices for reference).
+        WLOG we may assume all eigenvalues of D are +1 rather than -1;
+        otherwise we could just replace D by DE, where E is the diagonal matrix of eigenvalues of D
+        (i.e. diag(E) consists only of +/-1) without changing the covariance matrix.
         '''
         self.num_clust_checker(num_components)
         D = self.num_dim
@@ -30,19 +33,19 @@ class Mclust(MM):
         self.num_freeparam = num_components*(1+D)-1
 
         if self.constraint[0] == 'E':
-            return_dict["volumes"] = np.random.randn(1) * scale
+            return_dict["log volumes"] = np.random.randn(1) * scale
             self.num_freeparam += 1
         elif self.constraint[0] == 'V':
-            return_dict["volumes"] = np.random.randn(num_components) * scale
+            return_dict["log volumes"] = np.random.randn(num_components) * scale
             self.num_freeparam += num_components
 
         if self.constraint[1] == 'I':
-            return_dict["shapes"] = np.random.randn(0)
+            return_dict["log shapes"] = np.random.randn(0)
         elif self.constraint[1] == 'E':
-            return_dict["shapes"] = np.random.randn(D) * scale
+            return_dict["log shapes"] = np.random.randn(D) * scale
             self.num_freeparam += D-1
         elif self.constraint[1] == 'V':
-            return_dict["shapes"] = np.random.randn(num_components, D) * scale
+            return_dict["log shapes"] = np.random.randn(num_components, D) * scale
             self.num_freeparam += num_components*(D-1)
 
         if self.constraint[2] == 'I':
@@ -64,18 +67,16 @@ class Mclust(MM):
         D = self.num_dim
 
         if self.constraint[0] == 'E':
-            volumes = np.exp(params["volumes"].repeat(num_components))
+            volumes = np.exp(params["log volumes"].repeat(num_components))
         elif self.constraint[0] == 'V':
-            volumes = np.exp(params["volumes"])
+            volumes = np.exp(params["log volumes"])
 
         if self.constraint[1] == 'I':
             shapes = np.zeros((num_components,D,D)) + np.eye(D)
         elif self.constraint[1] == 'E':
-            shapes = np.zeros((num_components,D,D)) + np.diag(np.exp(params["shapes"]-np.sum(params["shapes"])/D))
+            shapes = np.zeros((num_components,D,D)) + np.diag(np.exp(params["log shapes"]-np.sum(params["shapes"])/D))
         elif self.constraint[1] == 'V':
-            #shapes = np.apply_along_axis(np.diag,-1,1.0*np.exp(params["shapes"]-np.sum(params["shapes"])/D))
-            diags = [np.diag(row) for row in np.exp(params["shapes"]-np.sum(params["shapes"])/D)]
-            shapes = np.array(diags)
+            shapes = np.array([np.diag(row) for row in np.exp(params["log shapes"]-np.sum(params["log shapes"])/D)])
 
         if self.constraint[2] == 'I':
             orientations = np.zeros((num_components,D,D)) + np.eye(D)
@@ -91,7 +92,6 @@ class Mclust(MM):
 
 
     def likelihood(self, params):
-        "returns the likelihood of mclust"
         cluster_lls = []
         for log_proportion, mean, shape, orientation, volume in zip(*self.unpack_params(params)):
             cov = volume * orientation @ shape @ orientation.T
