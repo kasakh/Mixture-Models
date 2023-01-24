@@ -52,7 +52,7 @@ class MM(object):
     def plot_gaussian_mixture(self, params, ax):
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
             alpha = np.minimum(1.0, np.exp(log_proportion) * 10)
-            plot_ellipse(ax, mean, cov_sqrt, alpha)
+            self.plot_ellipse(ax, mean, cov_sqrt, alpha)
         # plot_ellipse(ax, mean, cov_sqrt, alpha)
 
     def kl_mvn(self, m0, S0, m1, S1):
