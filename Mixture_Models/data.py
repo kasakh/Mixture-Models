@@ -4,7 +4,9 @@ import matplotlib.image
 
 import autograd.numpy as np
 import autograd.numpy.random as npr
-from .data_mnist import *
+import data_mnist
+
+from sklearn.datasets._base import load_csv_data
 
 
 def load_mnist():
@@ -86,3 +88,6 @@ def make_pinwheel(
     rotations = np.reshape(rotations.T, (-1, 2, 2))
 
     return np.einsum("ti,tij->tj", features, rotations)
+
+def load_csvdataset(file="iris"):
+    return load_csv_data("datasets/"+file+".csv")[0]

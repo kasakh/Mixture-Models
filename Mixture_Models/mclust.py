@@ -1,3 +1,5 @@
+from .mixture_models import *
+
 class Mclust(MM):
     def __init__(self, data, constraint="VVV"):
         self.constraint_set = {'EII','VII','EEI','VEI','EVI','VVI','EEE','VEE','EVE','VVE','EEV','VEV','EVV','VVV'}
@@ -5,7 +7,7 @@ class Mclust(MM):
             self.constraint = constraint
         else:
             raise ValueError(
-                'constraint should be one of {'EII','VII','EEI','VEI','EVI','VVI','EEE','VEE','EVE','VVE','EEV','VEV','EVV','VVV'} '
+                "constraint should be one of {'EII','VII','EEI','VEI','EVI','VVI','EEE','VEE','EVE','VVE','EEV','VEV','EVV','VVV'} "
             )
 
         self.data_checker(data)
@@ -61,24 +63,24 @@ class Mclust(MM):
         D = self.num_dim
 
         if self.constraint[0] == 'E':
-            volumes = np.exp(return_dict["volumes"].repeat(num_components))
+            volumes = np.exp(params["volumes"].repeat(num_components))
         elif self.constraint[0] == 'V':
-            volumes = np.exp(return_dict["volumes"])
+            volumes = np.exp(params["volumes"])
 
         if self.constraint[1] == 'I':
             shapes = np.zeros((num_components,D,D)) + np.eye(D)
         elif self.constraint[1] == 'E':
-            shapes = np.zeros((num_components,D,D)) + np.diag(np.exp(return_dict["shapes"]-np.sum(return_dict["shapes"])/D))
+            shapes = np.zeros((num_components,D,D)) + np.diag(np.exp(params["shapes"]-np.sum(params["shapes"])/D))
         elif self.constraint[1] == 'V':
-            shapes = np.apply_along_axis(np.diag,-1,np.exp(return_dict["shapes"]-np.sum(return_dict["shapes"])/D))
+            shapes = np.apply_along_axis(np.diag,-1,np.exp(params["shapes"]-np.sum(params["shapes"])/D))
 
         if self.constraint[2] == 'I':
             orientations = np.zeros((num_components,D,D)) + np.eye(D)
         elif self.constraint[2] == 'E':
-            skew_symm = (return_dict["orientations"]-np.transpose(return_dict["orientations"]))/2
+            skew_symm = (params["orientations"]-np.transpose(params["orientations"]))/2
             orientations = np.zeros((num_components,D,D)) + ((np.eye(D) + skew_symm) @ np.linalg.inv(np.eye(D) - skew_symm))
         elif self.constraint[2] == 'V':
-            skew_symm = (return_dict["orientations"]-np.transpose(return_dict["orientations"],(0,2,1)))/2
+            skew_symm = (params["orientations"]-np.transpose(params["orientations"],(0,2,1)))/2
             orientations = (np.eye(D) + skew_symm) @ np.linalg.inv(np.eye(D) - skew_symm)
 
         return normalized_log_proportions, params["means"], shapes, orientations, volumes
@@ -98,7 +100,7 @@ class Mclust(MM):
         return -self.mclust_likelihood(params)
 
 
-     def aic(self, params):
+    def aic(self, params):
         return 2 * self.num_freeparam + 2 * self.objective(params)
 
     def bic(self, params):

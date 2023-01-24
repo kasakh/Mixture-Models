@@ -1,4 +1,4 @@
-from .mixture_models import *
+from .gmm import *
 #import scipy.stats.multivariate_t as mvt
 from scipy.special import gammaln
 
