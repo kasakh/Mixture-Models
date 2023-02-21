@@ -1,5 +1,5 @@
 from .mixture_models import *
-
+import autograd.numpy as np
 
 class MFA(MM):
     def __init__(self, data):

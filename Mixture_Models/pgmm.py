@@ -1,5 +1,5 @@
 from .mfa import *
-
+import autograd.numpy as np
 
 class PGMM(MFA):
     def __init__(self, data, constraint="CCC"):

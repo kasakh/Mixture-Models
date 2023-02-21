@@ -1,5 +1,6 @@
 from .gmm import *
 from autograd.scipy.special import gammaln
+import autograd.numpy as np
 
 class TMM(GMM):
     def init_params(self, num_components, scale=1.0):
@@ -51,4 +52,20 @@ class TMM(GMM):
             logpdf = gammaln((dof+D)/2)-gammaln(dof/2)-0.5*np.log(np.linalg.det(np.pi*dof*cov_sqrt.T @ cov_sqrt)) - 0.5*(dof+D)*np.log(1+np.sum(((data-mean)@np.linalg.inv(cov_sqrt))**2,axis=1)/dof)
             cluster_lls.append(log_proportion + logpdf)
         return np.argmax(np.array(cluster_lls).T,axis=1)
+    
+    def fit(self, init_params, opt_routine, **kargs):
+        self.params_store = []
+        flattened_obj, unflatten, flattened_init_params = flatten_func(
+            self.objective, init_params
+        )
+
+        def callback(flattened_params):
+            params = unflatten(flattened_params)
+            print("Log likelihood {}".format(self.likelihood(params)))
+            self.params_store.append(params)
+
+        self.optimize(
+            flattened_obj, flattened_init_params, callback, opt_routine, **kargs
+        )
+        return self.params_store
         

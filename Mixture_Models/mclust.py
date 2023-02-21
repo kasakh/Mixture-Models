@@ -74,7 +74,7 @@ class Mclust(MM):
         if self.constraint[1] == 'I':
             shapes = np.zeros((num_components,D,D)) + np.eye(D)
         elif self.constraint[1] == 'E':
-            shapes = np.zeros((num_components,D,D)) + np.diag(np.exp(params["log shapes"]-np.sum(params["shapes"])/D))
+            shapes = np.zeros((num_components,D,D)) + np.diag(np.exp(params["log shapes"]-np.sum(params["log shapes"])/D))
         elif self.constraint[1] == 'V':
             shapes = np.array([np.diag(row) for row in np.exp(params["log shapes"]-np.sum(params["log shapes"])/D)])
 

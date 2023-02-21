@@ -1,5 +1,6 @@
 from .mixture_models import *
-
+import autograd.numpy as np
+import autograd.scipy.stats.multivariate_normal as mvn
 
 class GMM(MM):
     def __init__(self, data):
@@ -14,6 +15,13 @@ class GMM(MM):
             - (0 * self.kl_div_tot(params["means"], kl_cov))
             - (-0.0 * self.kl_div_inverse_tot(params["means"], kl_cov))
         )
+    
+    def alt_gmm_log_likelihood(self, params, data):
+        cluster_lls = []
+        for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
+            cov = cov_sqrt.T @ cov_sqrt
+            cluster_lls.append(log_proportion + mvn.logpdf(data, mean, cov))
+        return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
     def alt_objective(self, params):
         return -self.alt_gmm_log_likelihood(params, self.data)
@@ -57,7 +65,7 @@ class GMM(MM):
     def fit(self, init_params, opt_routine, **kargs):
         self.params_store = []
         flattened_obj, unflatten, flattened_init_params = flatten_func(
-            self.objective, init_params
+            self.alt_objective, init_params
         )
 
         def callback(flattened_params):

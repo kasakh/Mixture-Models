@@ -88,6 +88,8 @@ def make_pinwheel(
 
     return np.einsum("ti,tij->tj", features, rotations)
 
+default_pinwheel_data = make_pinwheel(0.3, 0.05, 3, 100, 0.4)
+
 def load_csvdataset(file="iris"):
     #adapted from sklearn.datasets._base.load_csv_data
     maindir = os.path.join(os.path.dirname(__file__),'datasets')
