@@ -10,8 +10,7 @@ class PGMM(MFA):
             raise ValueError(
                 'constraint should be one of {"CCC","CCU","CUC","CUU","UCC","UCU","UUC","UUU"} '
             )
-
-        self.data_checker(data)
+        super().__init__(data)
 
     def init_params(self, num_components, q, scale=1.0):
         self.num_clust_checker(num_components)
@@ -69,12 +68,12 @@ class PGMM(MFA):
                 [params["fac_loadings"]] * np.size(normalized_log_proportions)
             )
             error = np.array(
-                [[params["error"]] * self.num_dim] * np.size(normalized_log_proportions)
+                [[params["error"][0]] * self.num_dim] * np.size(normalized_log_proportions)
             )
         if self.constraint == "UCC":
             fac_loadings = params["fac_loadings"]
             error = np.array(
-                [[params["error"]] * self.num_dim] * np.size(normalized_log_proportions)
+                [[params["error"][0]] * self.num_dim] * np.size(normalized_log_proportions)
             )
         if self.constraint == "UCU":
             fac_loadings = params["fac_loadings"]

@@ -16,6 +16,12 @@ from scipy.optimize import OptimizeResult
 
 
 class MM(object):
+    def __init__(self, data):
+        self.data_checker(data)
+        self.data = np.copy(data)
+        self.num_dim = np.shape(self.data)[1]
+        self.num_datapoints = np.shape(self.data)[0]
+
     def mvn_logpdf(self, X, mu, cov_sqrt):
         return -0.5 * np.log(
             np.linalg.det(2 * np.pi * cov_sqrt.T @ cov_sqrt)
@@ -428,10 +434,6 @@ class MM(object):
             raise ValueError("Input data contains non-finite numbers")
         elif not (np.isreal(data).all()):
             raise ValueError("Input data contains non-real numbers")
-        else:
-            self.data = data
-            self.num_dim = np.shape(data)[1]
-            self.num_datapoints = np.shape(data)[0]
 
     def num_clust_checker(self, K):
         if np.isnan(K).any():

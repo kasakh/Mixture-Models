@@ -1,4 +1,5 @@
 from .mixture_models import *
+from .checkers import *
 import autograd.numpy as np
 
 class Mclust(MM):
@@ -11,7 +12,7 @@ class Mclust(MM):
                 "constraint should be one of {'EII','VII','EEI','VEI','EVI','VVI','EEE','VEE','EVE','VVE','EEV','VEV','EVV','VVV'} "
             )
 
-        self.data_checker(data)
+        super().__init__(data)
 
 
     def init_params(self, num_components, scale=1.0):
@@ -89,7 +90,17 @@ class Mclust(MM):
 
         return normalized_log_proportions, params["means"], shapes, orientations, volumes
 
-
+    def params_checker(self, params, nonneg=True):
+        D = self.num_dim
+        proportions = []
+        for log_proportion, mean, shape, orientation, volume in zip(*self.unpack_params(params)):
+            check_dim(log_proportion,()) and check_pos(-log_proportion)
+            proportions.append(np.exp(log_proportion))
+            check_dim(mean,(D,)) and check_finite(mean)
+            check_dim(shape,(D,D)) and check_diagonal(shape) and check_pos(np.diag(shape),nonneg)
+            check_dim(orientation,(D,D)) and check_orthogonal(orientation)
+            check_dim(volume,()) and check_pos(volume,nonneg)
+        check_probdist(np.array(proportions))
 
     def likelihood(self, params):
         cluster_lls = []
@@ -128,12 +139,14 @@ class Mclust(MM):
         flattened_obj, unflatten, flattened_init_params = flatten_func(
             self.objective, init_params
         )
-
+        
         def callback(flattened_params):
             params = unflatten(flattened_params)
-            print("Log likelihood {}".format(self.likelihood(params)))
-
-            #
+            self.params_checker(params,nonneg=False)
+            likelihood = self.likelihood(params)
+            if not np.isfinite(likelihood):
+                raise ValueError("Log likelihood is {}".format(likelihood))
+            print("Log likelihood {}".format(likelihood))
             self.params_store.append(params)
 
         self.optimize(

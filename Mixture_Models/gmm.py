@@ -1,11 +1,9 @@
 from .mixture_models import *
+from .checkers import *
 import autograd.numpy as np
 import autograd.scipy.stats.multivariate_normal as mvn
 
 class GMM(MM):
-    def __init__(self, data):
-        self.data_checker(data)
-
     def objective(self, params):
         kl_cov = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
@@ -44,6 +42,19 @@ class GMM(MM):
     def unpack_params(self, params):
         normalized_log_proportions = self.log_normalize(params["log proportions"])
         return normalized_log_proportions, params["means"], params["sqrt_covs"]
+    
+    def params_checker(self, params, nonneg=True):
+        D = self.num_dim
+        proportions = []
+        for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
+            check_dim(log_proportion,()) and check_pos(-log_proportion)
+            proportions.append(np.exp(log_proportion))
+            check_dim(mean,(D,)) and check_finite(mean)
+            check_dim(cov_sqrt,(D,D)) and check_finite(cov_sqrt)
+            if not nonneg:
+                check_posdef(cov_sqrt.T @ cov_sqrt)
+        check_probdist(np.array(proportions))
+
 
     def aic(self, params):
         return 2 * self.num_freeparam + 2 * self.alt_objective(params)
@@ -70,7 +81,11 @@ class GMM(MM):
 
         def callback(flattened_params):
             params = unflatten(flattened_params)
-            print("Log likelihood {}".format(self.likelihood(params)))
+            self.params_checker(params,nonneg=False)
+            likelihood = self.likelihood(params)
+            if not np.isfinite(likelihood):
+                raise ValueError("Log likelihood is {}".format(likelihood))
+            print("Log likelihood {}".format(likelihood))
             self.params_store.append(params)
 
         self.optimize(

@@ -1,10 +1,8 @@
 from .mixture_models import *
+from .checkers import *
 import autograd.numpy as np
 
 class MFA(MM):
-    def __init__(self, data):
-        self.data_checker(data)
-
     def objective(self, params):
         return -self.fac_log_likelihood(params, self.data)
 
@@ -30,7 +28,7 @@ class MFA(MM):
     def init_params(self, num_components, q, scale=1.0):
         self.num_clust_checker(num_components)
         p = self.num_dim
-        self.num_freeparam = num_components * (p * q - 0.5 * q * (q - 1) + p)
+        self.num_freeparam = num_components * (1 + p + p * q + p) - 1
         return {
             "log proportions": np.random.randn(num_components) * scale,
             "means": np.random.randn(num_components, p) * scale,
@@ -46,6 +44,18 @@ class MFA(MM):
             params["fac_loadings"],
             params["error"],
         )
+    
+    def params_checker(self, params, nonneg=True):
+        p = self.num_dim
+        q = np.shape(params["fac_loadings"])[-1]
+        proportions = []
+        for log_proportion, mean, cov_sqrt, error in zip(*self.unpack_params(params)):
+            check_dim(log_proportion,()) and check_pos(-log_proportion)
+            proportions.append(np.exp(log_proportion))
+            check_dim(mean,(p,)) and check_finite(mean)
+            check_dim(cov_sqrt,(p,q)) and check_finite(cov_sqrt)
+            check_dim(error,(p,)) and check_finite(mean)
+        check_probdist(np.array(proportions))
 
     def fac_log_likelihood(self, params, data):
         cluster_lls = []
@@ -74,17 +84,19 @@ class MFA(MM):
 
         return np.argmax(np.array(cluster_lls).T, axis=1)
 
-    def fit(self, init_params, opt_routine, draw=None, **kargs):
+    def fit(self, init_params, opt_routine, **kargs):
         self.params_store = []
         flattened_obj, unflatten, flattened_init_params = flatten_func(
             self.objective, init_params
         )
-
+        
         def callback(flattened_params):
             params = unflatten(flattened_params)
-            print("Log likelihood {}".format(self.likelihood(params)))
-
-            #
+            self.params_checker(params,nonneg=False)
+            likelihood = self.likelihood(params)
+            if not np.isfinite(likelihood):
+                raise ValueError("Log likelihood is {}".format(likelihood))
+            print("Log likelihood {}".format(likelihood))
             self.params_store.append(params)
 
         self.optimize(
