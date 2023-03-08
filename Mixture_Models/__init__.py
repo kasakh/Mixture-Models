@@ -1,4 +1,5 @@
 from .mixture_models import *
+from .data import *
 from .gmm import *
 from .gmm_conc import *
 from .mfa import *

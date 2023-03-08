@@ -4,6 +4,30 @@ import autograd.numpy as np
 import autograd.scipy.stats.multivariate_normal as mvn
 
 class GMM(MM):
+    """Class for Gaussian mixture models (GMMs).
+
+    Inherits from the base MM class, and is instantiated the same way.
+    It also has the following additional attributes:
+    
+    Attributes
+    ----------
+    num_freeparam : int
+        Number of degrees of freedom (used for calculating AIC, BIC etc.)
+    params_store : list
+        Initialized after calling method `fit`.
+        Contains the history of fitted parameters across iterations.
+    
+    Methods
+    -------
+    init_params(num_components, scale=1.0)
+        Initializes random GMM parameters, for a given number of components.
+    fit(init_params, opt_routine, **kargs)
+        Runs optimization routine with the given initialization.
+    labels(data, params_store)
+        Returns 'hard' cluster assignments for given data, based on fitted parameters.
+
+    """
+
     def objective(self, params):
         kl_cov = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
@@ -28,6 +52,37 @@ class GMM(MM):
         return -self.alt_objective(params)
 
     def init_params(self, num_components, scale=1.0):
+        """Initialize the GMM with random parameters.
+
+        Parameters
+        ----------
+        num_components : int
+            Number of mixture components (i.e. clusters) to be fitted.
+            Must be a positive integer :math:`\geq` number of input datapoints.
+        
+        scale : float, optional
+            Scale parameter, defaults to 1.
+            Corresponds roughly to the amount of heterogeneity between clusters.
+
+        Returns
+        -------
+        init_params : dict
+            Dictionary of named parameters. Consists of the following entries:
+
+            log proportions
+              Real vector of shape (num_components)
+            means
+              Real matrix of shape (num_components, D)
+            sqrt_covs
+              Real matrixof shape (num_components, D, D)
+            
+            where D = number of data dimensions.
+        
+        See Also
+        --------
+        GMM.unpack_params : interface between the return value and other methods
+        GMM.alt_objective : loss function where the unpacked values are used 
+        """
         self.num_clust_checker(num_components)
         D = self.num_dim
 
@@ -65,6 +120,29 @@ class GMM(MM):
         ) * self.num_freeparam + 2 * self.alt_objective(params)
 
     def labels(self, data, params_store):
+        """Assigns clusters to data, based on given parameters.
+
+        This cluster assignment is "hard", in the sense that it returns one cluster for each data point,
+        unlike "soft" classifiers that return a probability distribution over clusters for each data point.
+
+        Parameters
+        ----------
+        data : (..., N, D) ndarray
+            D-dimensional input of (..., N) datapoints to be labelled.
+        params_store : dict
+            Dictionary of named parameters, of the same format as
+            the return value of `GMM.init_params`.
+        
+        Returns
+        -------
+        labels : (..., N) ndarray
+            A {1,...,num_components}-valued ndarray with as many elements as datapoints.
+            Each value corresponds to a "hard" cluster assignment.
+        
+        See Also
+        --------
+        GMM.init_params
+        """
         cluster_lls = []
 
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params_store)):
@@ -74,6 +152,33 @@ class GMM(MM):
         return np.argmax(np.array(cluster_lls).T, axis=1)
 
     def fit(self, init_params, opt_routine, **kargs):
+        """Fits GMM parameters to the data of the model instance.
+
+        This is done by calling the supplied optimization routine `opt_routine`
+        with the supplied parameter initializations `init_params`.
+
+        Parameters
+        ----------
+        init_params : dict
+            Dictionary of named parameters, of the same format as
+            the return value of `GMM.init_params`.
+            This is used an initial input to the optimization routine.
+        opt_routine : {'grad_descent','rms_prop','adam','Newton-CG'}
+            The optimization routine to be called.
+            Must be one of the strings listed above.
+        **kargs : dict, optional
+        Other parameters (passed to the `opt_routine` call). 
+
+        Returns
+        -------
+        None
+            However, the attribute `params_store` is updated as a side effect.
+
+        See Also
+        --------
+        GMM.alt_objective : loss function for the optimization
+        
+        """
         self.params_store = []
         flattened_obj, unflatten, flattened_init_params = flatten_func(
             self.alt_objective, init_params
