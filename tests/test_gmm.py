@@ -37,4 +37,31 @@ def test_gmm_different_initializations_illustration():
     from scipy.linalg import sqrtm
     init_params['sqrt_covs'][0] = sqrtm([[4,-0.75],[-0.75,1]])
     
-    utils.check_fromfile(test_GMM,init_params,"grad_descent",{'learning_rate':0.0005,'mass':0.9,'maxiter':100,'tol':1e-7},"expected_test_gmm_different_initializations_illustration.json",['likelihood'])    
+    utils.check_fromfile(test_GMM,init_params,"grad_descent",{'learning_rate':0.0005,'mass':0.9,'maxiter':100,'tol':1e-7},"expected_test_gmm_different_initializations_illustration.json",['likelihood'])  
+
+
+def test_other_datasets():
+    datasets = ["iris","wine"]
+    expected_init_params = [
+        {'log proportions': [ 0.66579325,  0.35763949, -0.77270015],
+        'means':[[-0.00419192,  0.31066799, -0.36004278,  0.13275579],
+        [ 0.05427426,  0.00214572, -0.08730011,  0.21651309],
+        [ 0.60151869, -0.48253284,  0.51413704,  0.11431507]],
+        'sqrt_covs':[np.eye(4),np.eye(4),np.eye(4)]},
+        {'log proportions': [ 0.66579325,  0.35763949, -0.77270015],
+        'means':[[-0.00419192,  0.31066799, -0.36004278,  0.13275579,  0.05427426,
+         0.00214572, -0.08730011,  0.21651309,  0.60151869, -0.48253284,
+         0.51413704,  0.11431507,  0.22256881],
+       [-0.56830111,  0.06756844,  0.7422685 , -0.53990244, -0.98886414,
+        -0.87168615,  0.13303508,  1.19248367,  0.56184563,  0.83631111,
+         0.04957461,  0.69899819, -0.13562399],
+       [ 0.30660209, -0.13365859, -0.27465451,  0.06635415, -0.23807101,
+         0.65423654,  0.09750664,  0.20010499, -0.16881617,  0.62823613,
+        -0.36598475,  0.33011578, -0.17543595]],
+        'sqrt_covs':[np.eye(13),np.eye(13),np.eye(13)]}
+    ]
+    for i, dataset in enumerate(datasets):
+        test_GMM, init_params = utils.init_MM(GMM,data.load_csvdataset(dataset)[0],10,
+        init_params_args={'num_components':3,'scale':0.5},
+        expected=expected_init_params[i])
+        utils.check_fromfile(test_GMM,init_params,"Newton-CG",{'maxiter':100,'tol':1e-7},"expected_test_other_datasets_"+str(i)+".json",['likelihood','aic','bic'])

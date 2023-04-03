@@ -89,9 +89,11 @@ class MM(object):
         ) - 0.5 * np.sum(((X - mu) @ np.linalg.inv(cov_sqrt)) ** 2, axis=1)
 
     def log_normalize(self, x):
+        """Given a log vector of unnormalized probabilities, returns a log vector of normalized probabilities."""
         return x - logsumexp(x)
 
     def gmm_log_likelihood(self, params, data):
+        """Calculates the log-likelihood for the GMM model."""
         cluster_lls = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
 
@@ -100,6 +102,7 @@ class MM(object):
         return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
     def alt_gmm_log_likelihood(self, params, data):
+        """Calculates the log-likelihood for the GMM model."""
         cluster_lls = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
             cov = cov_sqrt.T @ cov_sqrt
@@ -489,6 +492,7 @@ class MM(object):
             )
 
     def data_checker(self, data):
+        """Verifies that data is of the correct form for a mixture model to be fitted."""
         if np.isnan(data).any():
             raise ValueError("Input data contains NANs")
         elif not (np.isfinite(data).all()):
@@ -497,6 +501,7 @@ class MM(object):
             raise ValueError("Input data contains non-real numbers")
 
     def num_clust_checker(self, K):
+        """Verifies that the given number of clusters is consistent with the mixture model data."""
         if np.isnan(K).any():
             raise ValueError("Number of clusters should not be NaN")
         elif not (np.isfinite(K).all()):

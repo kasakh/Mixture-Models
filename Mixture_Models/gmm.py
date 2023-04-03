@@ -23,12 +23,17 @@ class GMM(MM):
         Initializes random GMM parameters, for a given number of components.
     fit(init_params, opt_routine, **kargs)
         Runs optimization routine with the given initialization.
-    labels(data, params_store)
+    labels(data, params)
         Returns 'hard' cluster assignments for given data, based on fitted parameters.
-
+    
+    See Also
+    --------
+    GMM_Constrainted : Child class with constrained common variance.
+    TMM : Child class with a mixture of t-distributions instead of Gaussians.
     """
 
     def objective(self, params):
+        """Calculates the negative log-likelihood for the GMM model."""
         kl_cov = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
             kl_cov.append(cov_sqrt.T @ cov_sqrt)
@@ -39,6 +44,32 @@ class GMM(MM):
         )
     
     def alt_gmm_log_likelihood(self, params, data):
+        """Calculates the log-likelihood for the GMM model.
+        
+        Notes
+        -----
+        The input `params` is to be a dictionary of named parameters,
+        of the same format as the return value of `GMM.init_params`.
+        In terms of the parameter names `log_proportions`, `means` and `sqrt_covs`,
+        the formula for the log-likelihood can be written as
+
+        .. math:: \mathrm{logsumexp}\left(\mathtt{log_proportions}^\top f(x|\mathtt{means},\mathtt{sqrt_covs})\right)
+
+        where `f` denots the vector of log-likelihoods for each component,
+        with the `i`th component having a multivariate Gaussian distribution
+
+        .. math:: f_i(x|\mu_i,\Sigma_i) = |2\pi\Sigma_i|^{-1/2} \cdot \exp\left\{-(x-\mu_i)^T\Sigma_i^{-1}(x-\mu_i)/2\right}
+
+        evaluated on datapoint x, where :math:`\mu_i = \mathtt{means}_i` and :math:`\Sigma_i = \mathtt{sqrt_covs}_i^\top \mathtt{sqrt_covs}_i`
+        are the component's mean and covariance matrices respectively.
+        (We parametrize the latter in terms of its (Cholesky) square root,
+        because it is unconstrained by any positive definiteness assumptions,
+        and hence more amenable to optimization.)
+
+        See Also
+        --------
+        GMM.init_params
+        """
         cluster_lls = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
             cov = cov_sqrt.T @ cov_sqrt
@@ -46,9 +77,11 @@ class GMM(MM):
         return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
     def alt_objective(self, params):
+        """Calculates the negative log-likelihood for the GMM model."""
         return -self.alt_gmm_log_likelihood(params, self.data)
 
     def likelihood(self, params):
+        """Calculates the model log-likelihood."""
         return -self.alt_objective(params)
 
     def init_params(self, num_components, scale=1.0):
@@ -74,14 +107,16 @@ class GMM(MM):
             means
               Real matrix of shape (num_components, D)
             sqrt_covs
-              Real matrixof shape (num_components, D, D)
+              Vector of real matrices of shape (num_components, D, D)
             
             where D = number of data dimensions.
         
         See Also
         --------
         GMM.unpack_params : interface between the return value and other methods
-        GMM.alt_objective : loss function where the unpacked values are used 
+        GMM.alt_gmm_log_likelihood : interprets each parameter in terms of
+                                     its contribution to the log-likelihood
+        GMM.alt_objective : loss function where the unpacked values are used
         """
         self.num_clust_checker(num_components)
         D = self.num_dim
@@ -95,10 +130,53 @@ class GMM(MM):
         }
 
     def unpack_params(self, params):
+        """Expands a dictionary of named parameters into a tuple.
+        
+        Parameters
+        ----------
+        params : dict
+            Dictionary of named parameters, of the same format as
+            the return value of `GMM.init_params`.
+        
+        Returns
+        -------
+        expanded_params : tuple
+            A tuple of expanded model parameters,
+            as can be used for calculating the model log-likelihood.
+        
+        See Also
+        --------
+        GMM.init_params
+        """
         normalized_log_proportions = self.log_normalize(params["log proportions"])
         return normalized_log_proportions, params["means"], params["sqrt_covs"]
     
     def params_checker(self, params, nonneg=True):
+        """Verifies that the model parameters are valid.
+        
+        Parameters
+        ----------
+        params : dict
+            Dictionary of named parameters to be checked,
+            of the same format as the return value of `GMM.init_params`.
+        nonneg : bool
+            Flag to control the check for covariance matrices,
+            i.e. whether they are to be merely positive semidefinite (True)
+            or if positive definiteness is required (False).
+        
+        Returns
+        -------
+        None
+        
+        Raises
+        ------
+        AssertionError
+            Upon test failure.
+        
+        See Also
+        --------
+        GMM.init_params
+        """
         D = self.num_dim
         proportions = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
@@ -112,14 +190,16 @@ class GMM(MM):
 
 
     def aic(self, params):
+        """Calculates the model AIC (Akaike Information Criterion)."""
         return 2 * self.num_freeparam + 2 * self.alt_objective(params)
 
     def bic(self, params):
+        """Calculates the model BIC (Bayesian Information Criterion)."""
         return np.log(
             self.num_datapoints
         ) * self.num_freeparam + 2 * self.alt_objective(params)
 
-    def labels(self, data, params_store):
+    def labels(self, data, params):
         """Assigns clusters to data, based on given parameters.
 
         This cluster assignment is "hard", in the sense that it returns one cluster for each data point,
@@ -129,7 +209,7 @@ class GMM(MM):
         ----------
         data : (..., N, D) ndarray
             D-dimensional input of (..., N) datapoints to be labelled.
-        params_store : dict
+        params : dict
             Dictionary of named parameters, of the same format as
             the return value of `GMM.init_params`.
         
@@ -145,7 +225,7 @@ class GMM(MM):
         """
         cluster_lls = []
 
-        for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params_store)):
+        for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
 
             cluster_lls.append(log_proportion + self.mvn_logpdf(data, mean, cov_sqrt))
 

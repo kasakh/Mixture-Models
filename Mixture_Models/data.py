@@ -98,10 +98,19 @@ def load_csvdataset(file="iris"):
         temp = next(data_file)
         n_samples = int(temp[0])
         n_features = int(temp[1])
-        target_names = np.array(temp[2:])
+        feature_names, target_names = None, None
+        if len(temp) > 2:
+            feature_names = np.array(temp[2:(3+n_features)])
+            if len(temp) > 3+feature_names:
+                target_names = np.array(temp[(3+n_features):])
         data = np.empty((n_samples,n_features))
+        truth = np.empty((n_samples,))
+        has_ground_truth = None
         for i,ir in enumerate(data_file):
-            data[i] = np.asarray(ir[:-1],dtype=np.float64)
-        return data
-
-    return load_csv_data(+file+".csv",data_module=maindir)[0]
+            if has_ground_truth or len(ir)==n_features+1:
+                data[i] = np.asarray(ir[:-1],dtype=np.float64)
+                truth[i] = int(ir[-1])
+                has_ground_truth = True
+            else:
+                data[i] = np.asarray(ir,dtype=np.float64)
+        return data, feature_names, target_names, truth
