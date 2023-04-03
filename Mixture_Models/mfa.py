@@ -210,6 +210,35 @@ class MFA(MM):
         check_probdist(np.array(proportions))
 
     def fac_log_likelihood(self, params, data):
+        """Calculates the log-likelihood for the MFA model.
+        
+        Notes
+        -----
+        The input `params` is to be a dictionary of named parameters,
+        of the same format as the return value of `MFA.init_params`.
+        In terms of the parameter names `log_proportions`, `means`, `cov_sqrt` and `error`,
+        the formula for the log-likelihood can be written as
+
+        .. math:: \mathrm{logsumexp}\left(\mathtt{log_proportions}^\top f(x|\mathtt{means},\mathtt{cov_sqrts},\mathtt{error})\right)
+
+        where `f` denots the vector of log-likelihoods for each component,
+        with the `i`th component having a multivariate Gaussian distribution
+
+        .. math:: f_i(x|\mu_i,\Sigma_i) = |2\pi\Sigma_i|^{-1/2} \cdot \exp\left\{-(x-\mu_i)^T\Sigma_i^{-1}(x-\mu_i)/2\right}
+
+        evaluated on datapoint x, where :math:`\mu_i = \mathtt{means}_i` and :math:`\Sigma_i`
+        are the component's mean and covariance matrices respectively,
+        with the latter being defined in terms of the remaining parameters as
+        
+        .. math:: \Sigma_i = \mathtt{cov_sqrts}_i\mathtt{cov_sqrts}_i^\top + diag\left[\mathtt{error}_i \circ \mathtt{error}_i\right]
+
+        where :math:`\circ` is the Hadamard product of the vector :math:`\mathtt{error}_i` with itself,
+        and :math`diag[\dots]` forms a diagonal matrix with this vector as its main entries.
+
+        See Also
+        --------
+        MFA.init_params
+        """
         cluster_lls = []
         for log_proportion, mean, cov_sqrt, error in zip(*self.unpack_params(params)):
             cov = (cov_sqrt @ cov_sqrt.T) + (np.diag(error) @ np.diag(error))
@@ -217,6 +246,12 @@ class MFA(MM):
         return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
     def fac_log_likelihood_alt(self, params, data):
+        """Alternate expression for the log-likelihood of the MFA model.
+        
+        See Also
+        --------
+        MFA.fac_log_likelihood
+        """
         cluster_lls = []
         for log_proportion, mean, cov_sqrt, error in zip(*self.unpack_params(params)):
             cov = (cov_sqrt @ cov_sqrt.T) + (np.diag(error) @ np.diag(error))

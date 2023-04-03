@@ -156,6 +156,31 @@ class PGMM(MFA):
         return return_dict
 
     def unpack_params(self, params):
+        """Expands a dictionary of named parameters into a tuple.
+        
+        Parameters
+        ----------
+        params : dict
+            Dictionary of named parameters, of the same format as
+            the return value of `PGMM.init_params`,
+            and compatible with the instance value of the `constraint` attribute.
+        
+        Returns
+        -------
+        expanded_params : tuple
+            A tuple of expanded model parameters,
+            as can be used for calculating the model log-likelihood.
+
+        Notes
+        -----
+        This methods expands the constrained parameters by repetition
+        until they have the same dimensionality as the unconstrained MFA model.
+
+        See Also
+        --------
+        MFA.unpack_params : corresponding method for MFA models
+        PGMM.init_params
+        """
         normalized_log_proportions = self.log_normalize(params["log proportions"])
         if self.constraint == "CCC":
             fac_loadings = np.array(
