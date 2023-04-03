@@ -1,6 +1,7 @@
 from .mixture_models import *
 from .checkers import *
 import autograd.numpy as np
+from sklearn.cluster import KMeans
 
 class Mclust(MM):
     """
@@ -79,7 +80,7 @@ class Mclust(MM):
         super().__init__(data)
 
 
-    def init_params(self, num_components, scale=1.0):
+    def init_params(self, num_components, scale=1.0, use_kmeans=False, **kwargs):
         """
         Initializes the Mclust model with random parameters.
 
@@ -92,12 +93,13 @@ class Mclust(MM):
         scale : float, optional
             Scale parameter, defaults to 1.
             Corresponds roughly to the amount of heterogeneity between clusters.
+        
 
         Returns
         -------
         init_params : dict
             Dictionary of named parameters, whose entries depend on
-            the instance
+            the `constraint` attribute set upon initialization.
             
             Consists of the following entries:
 
@@ -105,32 +107,40 @@ class Mclust(MM):
               Real vector of shape (num_components)
             means
               Real matrix of shape (num_components, D)
-            sqrt_covs
-              Vector of real matrices of shape (num_components, D, D)
+            log volumes
+              Real vector of shape (1) or (num_components), depending on constraint
+            log shapes
+              Real array of shape () or (D) or (num_components, D), depending on constraint
+            orientations
+              Real array of shape () or (D,D) or (num_components, D, D), depending on constraint
             
             where D = number of data dimensions.
         
+        Other Parameters
+        ----------------
+        use_kmeans : bool, optional
+            If true, `means` are initialized from a fit of the k-means clustering algorithm,
+            otherwise (the default) they are randomized like the other parameters.
+        **kwargs : dict
+            Optional arguments passed to the k-means algorithm,
+            specifically to the implementation `sklearn.cluster.KMeans`.
+
         See Also
         --------
-        GMM.unpack_params : interface between the return value and other methods
-        GMM.alt_gmm_log_likelihood : interprets each parameter in terms of
-                                     its contribution to the log-likelihood
-        GMM.alt_objective : loss function where the unpacked values are used
+        Mclust.unpack_params : interface between the return value and other methods
+        Mclust.likelihood : interprets each parameter in terms of
+                            its contribution to the log-likelihood
+        Mclust.objective : loss function where the unpacked values are used
+        sklearn.cluster.KMeans
         """
-        '''
-        'log volumes' = log lambda (or log lambda_k)
-        'log shapes' = log (diag A) (or log diag A_k) (n.b. product of diagonal elements must = 1)
-        'orientations' = Cayley parametrization of the orthogonal matrix D (or D_k) of eigenvectors
-        (see https://planetmath.org/cayleysparameterizationoforthogonalmatrices for reference).
-        WLOG we may assume all eigenvalues of D are +1 rather than -1;
-        otherwise we could just replace D by DE, where E is the diagonal matrix of eigenvalues of D
-        (i.e. diag(E) consists only of +/-1) without changing the covariance matrix.
-        '''
         self.num_clust_checker(num_components)
         D = self.num_dim
         return_dict = {}
         return_dict["log proportions"] = np.random.randn(num_components) * scale
-        return_dict["means"] = np.random.randn(num_components, D) * scale
+        if use_kmeans:
+            return_dict["means"] = self.kmeans(num_components,**kwargs)
+        else:
+            return_dict["means"] = np.random.randn(num_components, D) * scale
         self.num_freeparam = num_components*(1+D)-1
 
         if self.constraint[0] == 'E':
@@ -175,11 +185,35 @@ class Mclust(MM):
         -------
         expanded_params : tuple
             A tuple of expanded model parameters,
-            as can be used for calculating the model log-likelihood.
+            as can be passed to `Mclust.likelihood` for calculation.
         
+        Notes
+        -----
+        The constraint-dependent parameters `log volumes`, `log shapes` and `orientations`
+        are expanded by repetition (as necessary depending on the `constraint`)
+        so as to form an eigendecomposition of the component covariance matrices,
+        as required by the `Mclust` specification.
+        Specifically, the covariance matrix of the i-th component is to be given by
+
+        .. math:: \Sigma_i = \mathtt{volume}_i \times \mathtt{orientation}_i\mathtt{shape}_i\mathtt{orientation}_i^\top
+
+        where the scale factors :math:`\mathtt{volume} > 0` are the exponential of `log volumes`,
+        the positive diagonal matrix with unit determinant :math:`\mathtt{shape}`
+        is constructed from the normalized exponential of the vector of `log shapes`,
+        and the orthogonal matrix :math:`\mathtt{orientation}` is derived from `orientations`
+        which is encoded as a skew-symmetric matrix using Cayley's parametrization [1]_.
+        (Without loss of generality, we may assume that :math:`\mathtt{orientation}` is positive definite,
+        otherwise just flip each column (i.e. eigenvector) corresponding to an eigenvalue of -1.)
+
+        References
+        ----------
+
+        .. [1] https://planetmath.org/cayleysparameterizationoforthogonalmatrices
+
         See Also
         --------
-        Mclust.init_params
+        Mclust: contains the original reference for the eigendecomposition parametrization of the Mclust mixture model
+        Mclust.init_params, Mclust.likelihood
         """
         normalized_log_proportions = self.log_normalize(params["log proportions"])
 
@@ -252,33 +286,34 @@ class Mclust(MM):
         
         Notes
         -----
-        This method relies on the subroutine `unpack_params`
-        to interpret the input dictionary of named parameters
-        and assemble them into a 
         The input `params` is to be a dictionary of named parameters,
         of the same format as the return value of `Mclust.init_params`,
         and compatible with the instance value of the `constraint` attribute.
-        In terms of the parameter names `log_proportions`, `means`, `sqrt_covs` and `log_dofs`,
-        the formula for the log-likelihood can be written as
+        This method relies on the subroutine `unpack_params`
+        to interpret the input dictionary of named parameters
+        and assemble them into a tuple of parameters
+        `log_proportions`, `means`, `shape`, `orientation` and `volume`.
 
-        .. math:: \mathrm{logsumexp}\left(\mathtt{log_proportions}^\top f(x|\mathtt{means},\mathtt{sqrt_covs},\mathtt{log_dofs})\right)
+        The formula for the log-likelihood can be written as
+
+        .. math:: \mathrm{logsumexp}\left(\mathtt{log_proportions}^\top f(x|\mathtt{means},\mathtt{volume} \times \mathtt{orientation}\mathtt{shape} \mathtt{orientation}^\top)\right)
 
         where `f` denots the vector of log-likelihoods for each component,
-        with the `i`th component having a multivariate t-distribution
+        with the `i`th component having a multivariate Gaussian distribution
 
-        .. math:: f_i(x|\mu_i,\Sigma_i,\nu_i) = |\pi\nu_i\Sigma_i|^{-1/2} \cdot \frac{\Gamma\left((\nu_i+D)/2\right)}{\Gamma\left(\nu_i/2\right)} \cdot \left[1+(x-\mu_i)^T\Sigma_i^{-1}(x-\mu_i)/\nu\right]^{-(\nu_i+D)/2}
+        .. math:: f_i(x|\mu_i,\Sigma_i) = |2\pi\Sigma_i|^{-1/2} \cdot \exp\left\{-(x-\mu_i)^T\Sigma_i^{-1}(x-\mu_i)/2\right}
 
-        evaluated on datapoint x, where D is the number of data dimensions,
-        and :math:`\mu_i = \mathtt{means}_i`, :math:`\Sigma_i = \mathtt{sqrt_covs}_i^\top \mathtt{sqrt_covs}_i`, :math:`\nu_i = \exp\left\{\mathtt{log_dofs}_i\right\}`
-        are the component's mean, covariance matrix, and degrees of freedom respectively.
-        (We parametrize :math:`\Sigma_i` in terms of its (Cholesky) square root,
-        and :math:`\nu_i` in terms of their logarithm,
-        because they are unconstrained by any assumptions of positivity (or positive definiteness)
-        and are hence more amenable to optimization.)
+        evaluated on datapoint x, where :math:`\mu_i = \mathtt{means}_i` and :math:`\Sigma_i`
+        are the component's mean and covariance matrices respectively,
+        with the latter being defined in terms of the remaining parameters as
+        
+        .. math:: \Sigma_i = \mathtt{volume}_i \times \mathtt{orientation}_i\mathtt{shape}_i\mathtt{orientation}_i^\top
+
+        in other words, they form an eigendecomposition of :math:`\Sigma_i`.
 
         See Also
         --------
-        Mclust.unpack_params : interprets the 
+        Mclust.unpack_params : constructs the eigendecomposition
         Mclust.init_params
         """
         cluster_lls = []
@@ -302,8 +337,10 @@ class Mclust(MM):
         return np.log(
             self.num_datapoints
         ) * self.num_freeparam + 2 * self.objective(params)
-
-
+    
+    def kmeans(self,num_components,**kwargs):
+        """Runs k-means on the data to obtain a reasonable initialization."""
+        return KMeans(num_components,kwargs).fit(self.data).cluster_centers_
 
     def labels(self, data, params):
         """Assigns clusters to data, based on given parameters.

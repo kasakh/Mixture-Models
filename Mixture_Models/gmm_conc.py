@@ -9,7 +9,7 @@ class GMM_Constrainted(GMM):
     (in particular, it is instantiated the same way).
     """
 
-    def init_params(self, num_components, scale=1.0):
+    def init_params(self, num_components, scale=1.0, use_kmeans=False, **kwargs):
         """Initialize the constrained GMM with random parameters.
 
         Parameters
@@ -35,10 +35,20 @@ class GMM_Constrainted(GMM):
               Real matrix of shape (D, D)
             
             where D = number of data dimensions.
-        
+
+        Other Parameters
+        ----------------
+        use_kmeans : bool, optional
+            If true, `means` are initialized from a fit of the k-means clustering algorithm,
+            otherwise (the default) they are randomized like the other parameters.
+        **kwargs : dict
+            Optional arguments passed to the k-means algorithm,
+            specifically to the implementation `sklearn.cluster.KMeans`.
+
         See Also
         --------
         GMM.init_params : corresponding method for unconstrained GMMs
+        sklearn.cluster.KMeans
         """
         self.num_clust_checker(num_components)
         D = self.num_dim
@@ -46,7 +56,7 @@ class GMM_Constrainted(GMM):
         # rs = npr.seed(1)
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": np.random.randn(num_components, D) * scale,
+            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, D) * scale,
             "sqrt_covs": np.zeros((D, D)) + np.eye(D),
         }
 

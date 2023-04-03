@@ -2,6 +2,7 @@ from .mixture_models import *
 from .checkers import *
 import autograd.numpy as np
 import autograd.scipy.stats.multivariate_normal as mvn
+from sklearn.cluster import KMeans
 
 class GMM(MM):
     """Class for Gaussian mixture models (GMMs).
@@ -84,7 +85,7 @@ class GMM(MM):
         """Calculates the model log-likelihood."""
         return -self.alt_objective(params)
 
-    def init_params(self, num_components, scale=1.0):
+    def init_params(self, num_components, scale=1.0, use_kmeans=False, **kwargs):
         """Initialize the GMM with random parameters.
 
         Parameters
@@ -110,13 +111,23 @@ class GMM(MM):
               Vector of real matrices of shape (num_components, D, D)
             
             where D = number of data dimensions.
-        
+
+        Other Parameters
+        ----------------
+        use_kmeans : bool, optional
+            If true, `means` are initialized from a fit of the k-means clustering algorithm,
+            otherwise (the default) they are randomized like the other parameters.
+        **kwargs : dict
+            Optional arguments passed to the k-means algorithm,
+            specifically to the implementation `sklearn.cluster.KMeans`.
+
         See Also
         --------
         GMM.unpack_params : interface between the return value and other methods
         GMM.alt_gmm_log_likelihood : interprets each parameter in terms of
                                      its contribution to the log-likelihood
         GMM.alt_objective : loss function where the unpacked values are used
+        sklearn.cluster.KMeans
         """
         self.num_clust_checker(num_components)
         D = self.num_dim
@@ -125,7 +136,7 @@ class GMM(MM):
         # rs = npr.seed(1)
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": np.random.randn(num_components, D) * scale,
+            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, D) * scale,
             "sqrt_covs": np.zeros((num_components, D, D)) + np.eye(D),
         }
 
@@ -198,6 +209,10 @@ class GMM(MM):
         return np.log(
             self.num_datapoints
         ) * self.num_freeparam + 2 * self.alt_objective(params)
+    
+    def kmeans(self,num_components,**kwargs):
+        """Runs k-means on the data to obtain a reasonable initialization."""
+        return KMeans(num_components,kwargs).fit(self.data).cluster_centers_
 
     def labels(self, data, params):
         """Assigns clusters to data, based on given parameters.

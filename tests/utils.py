@@ -1,4 +1,4 @@
-## Utility functions reused across various tests
+"""Utility functions reused across various tests."""
 
 from Mixture_Models import checkers
 import autograd.numpy as np
@@ -6,6 +6,7 @@ import json
 import os
 
 def check_array_equal(actual,expected,exact=False):
+    """Verifies that an ndarray has the expected dimension and values."""
     checkers.check_dim(actual,np.shape(expected))
     if exact:
         assert np.array_equal(actual,expected)
@@ -13,20 +14,24 @@ def check_array_equal(actual,expected,exact=False):
         assert np.allclose(actual,expected)
 
 def check_arraydict_equal(actual,expected,**kwargs):
+    """Verifies that a dictionary of ndarrays has the expected names and contents."""
     keys = sorted(actual.keys())
     assert keys == sorted(expected.keys())
     for k in keys:
         check_array_equal(actual[k],expected[k],kwargs)
 
 def check_metric_equal(MM,metric,params_store,expected,**kwargs):
+    """Verifies evaluation of a list of parameters under a given mixture model method (aka metric)."""
     actual = [getattr(MM,metric)(param) for param in params_store]
     check_array_equal(actual,expected,kwargs)
 
 def check_labels(MM,data,params_store,expected):
+    """Verifies final assignment of data for a given history of fitted mixture model parameters."""
     labels = np.array(MM.labels(data,params_store[-1]))
     check_array_equal(labels,expected,exact=True)
 
 def init_MM(MMclass,data,seed,init_params_args,expected,**kwargs):
+    """Initializes a mixture model and verifies that it has the expected values."""
     MM = MMclass(data,**kwargs)
     np.random.seed(seed)
     init_params = MM.init_params(**init_params_args)
@@ -34,6 +39,7 @@ def init_MM(MMclass,data,seed,init_params_args,expected,**kwargs):
     return MM, init_params
 
 def check_fit(MM,init_params,opt_routine,fit_args,expected_dim,expected_metrics):
+    """Fits a mixture model and verifies that it has the expected values under given evaluation metrics."""
     params_store = MM.fit(init_params,opt_routine,**fit_args)
     checkers.check_dim(params_store,(expected_dim,))
     for metric in expected_metrics:
@@ -41,10 +47,12 @@ def check_fit(MM,init_params,opt_routine,fit_args,expected_dim,expected_metrics)
     return params_store
 
 def check_fromfile(MM,init_params,opt_routine,fit_args,filepath,metrics):
+    """Fits a mixture model and verifies the results against expected values imported from a file."""
     params_store = MM.fit(init_params,opt_routine,**fit_args)
     actual_metrics = {metric:[getattr(MM,metric)(param) for param in params_store] for metric in metrics}
     actual_labels = np.array(MM.labels(MM.data,params_store[-1]))
-    #create_run([params_store,actual_metrics, actual_labels],filepath)      #uncomment this line when testing for the first time
+    #create_run([params_store,actual_metrics, actual_labels],filepath)
+    'Uncomment the above line when testing for the first time, this creates and exports the results.'
     with open(os.path.join('tests',filepath)) as param_file:
         expected_params_store, expected_metrics, expected_labels = json.load(param_file)
     assert len(params_store) == len(expected_params_store)
@@ -55,7 +63,7 @@ def check_fromfile(MM,init_params,opt_routine,fit_args,filepath,metrics):
     return params_store
 
 def create_run(run,filepath):
-    # Numpy serializer code from https://stackoverflow.com/a/47626762
+    # Numpy serializer code, written by 'karlB' and retrieved from https://stackoverflow.com/a/47626762
     class NumpyEncoder(json.JSONEncoder):
         def default(self, obj):
             if isinstance(obj, np.ndarray):

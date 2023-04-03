@@ -1,42 +1,173 @@
 from .mixture_models import *
 from .checkers import *
 import autograd.numpy as np
+from sklearn.cluster import KMeans
 
 class MFA(MM):
+    """Class for mixture-of-factor-analyzers (MFA) models.
+
+    Inherits from the base MM class, and is instantiated the same way.
+    It also has the following additional attributes:
+    
+    Attributes
+    ----------
+    num_freeparam : int
+        Number of degrees of freedom (used for calculating AIC, BIC etc.)
+    params_store : list
+        Initialized after calling method `fit`.
+        Contains the history of fitted parameters across iterations.
+    
+    Methods
+    -------
+    init_params(num_components, scale=1.0)
+        Initializes random MFA parameters, for a given number of components.
+    fit(init_params, opt_routine, **kargs)
+        Runs optimization routine with the given initialization.
+    labels(data, params)
+        Returns 'hard' cluster assignments for given data, based on fitted parameters.
+    
+    See Also
+    --------
+    PGMM : Child class allowing for constrained loading and/or error matrices.
+    """
+
     def objective(self, params):
+        """Calculates the negative log-likelihood for the MFA model."""
         return -self.fac_log_likelihood(params, self.data)
 
     def mvn_cov_logpdf(self, X, mu, cov):
+        """Computes the multivariate normal log probability density function.
+
+        Parameters
+        ----------
+        X : (..., N, D) ndarray
+            Arguments at which the normal log-pdf is to be evaluated.
+            Here D is the number of dimensions, and N the number of arguments.
+        mu : (..., D) vector
+            Mean vector. Must be broadcastable to the same shape as X.
+        cov : (..., D, D) matrix
+            Positive definite symmetric matrix. Must be conformable with `X-mu`.
+
+        Returns
+        -------
+        mvn_logpdf : (..., N)
+            Values of the D-dimensional normal log-pdf evaluated at X.
+        
+        Notes
+        -----
+        The multivariate normal probability density function is specified by
+
+        .. math:: f(x|\mu,\Sigma) = |2\pi\Sigma|^{-1/2} \cdot \exp\left\{-(x-\mu)^T\Sigma^{-1}(x-\mu)/2\right}
+
+        for argument :math:`x`, mean vector :math:`\mu` and covariance matrix :math:`\Sigma`.
+
+        This method computes the above function and returns the logarithm :math:`\log f`.
+        """
         return -0.5 * np.log(np.linalg.det(2 * np.pi * cov)) - 0.5 * np.sum(
             np.dot((X - mu), np.linalg.inv(cov)) * (X - mu), axis=1
         )
 
     def alt_objective(self, params):
+        """Calculates the negative log-likelihood for the MFA model."""
         return -self.fac_log_likelihood_alt(params, self.data)
 
     def likelihood(self, params):
+        """Calculates the log-likelihood for the model."""
         return -self.alt_objective(params)
 
     def aic(self, params):
+        """Calculates the model AIC (Akaike Information Criterion)."""
         return 2 * self.num_freeparam + 2 * self.alt_objective(params)
 
     def bic(self, params):
+        """Calculates the model BIC (Bayesian Information Criterion)."""
         return np.log(
             self.num_datapoints
         ) * self.num_freeparam + 2 * self.alt_objective(params)
 
-    def init_params(self, num_components, q, scale=1.0):
+    def kmeans(self,num_components,**kwargs):
+        """Runs k-means on the data to obtain a reasonable initialization."""
+        return KMeans(num_components,kwargs).fit(self.data).cluster_centers_
+
+    def init_params(self, num_components, q, scale=1.0, use_kmeans=False, **kwargs):
+        """Initialize the MFA with random parameters.
+
+        Parameters
+        ----------
+        num_components : int
+            Number of mixture components (i.e. clusters) to be fitted.
+            Must be a positive integer :math:`\geq` number of input datapoints.
+        
+        q : int
+            Number of latent (unobserved) factors in the covariance matrices.
+            Must be a positive integer < number of data dimensions.
+
+        scale : float, optional
+            Scale parameter, defaults to 1.
+            Corresponds roughly to the amount of heterogeneity between clusters.
+
+        Returns
+        -------
+        init_params : dict
+            Dictionary of named parameters. Consists of the following entries:
+
+            log proportions
+              Real vector of shape (num_components)
+            means
+              Real matrix of shape (num_components, p)
+            fac_loadings
+              Vector of real matrices of shape (num_components, p, q)
+            error
+              Real matrix of shape (num_components, p)
+            
+            where p = number of data dimensions.
+
+        Other Parameters
+        ----------------
+        use_kmeans : bool, optional
+            If true, `means` are initialized from a fit of the k-means clustering algorithm,
+            otherwise (the default) they are randomized like the other parameters.
+        **kwargs : dict
+            Optional arguments passed to the k-means algorithm,
+            specifically to the implementation `sklearn.cluster.KMeans`.
+
+        See Also
+        --------
+        MFA.unpack_params : interface between the return value and other methods
+        MFA.fac_log_likelihood : interprets each parameter in terms of
+                                 its contribution to the log-likelihood
+        MFA.objective : loss function where the unpacked values are used
+        sklearn.cluster.KMeans
+        """
         self.num_clust_checker(num_components)
         p = self.num_dim
-        self.num_freeparam = num_components * (1 + p + p * q + p) - 1
+        self.num_freeparam = num_components * (1 + p + p * q - 0.5 * q * (q - 1) + p) - 1
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": np.random.randn(num_components, p) * scale,
+            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, p) * scale,
             "fac_loadings": np.random.rand(num_components, p, q) * scale,
             "error": np.random.randn(num_components, p) * scale,
         }
 
     def unpack_params(self, params):
+        """Expands a dictionary of named parameters into a tuple.
+        
+        Parameters
+        ----------
+        params : dict
+            Dictionary of named parameters, of the same format as
+            the return value of `MFA.init_params`.
+        
+        Returns
+        -------
+        expanded_params : tuple
+            A tuple of expanded model parameters,
+            as can be used for calculating the model log-likelihood.
+        
+        See Also
+        --------
+        MFA.init_params
+        """
         normalized_log_proportions = self.log_normalize(params["log proportions"])
         return (
             normalized_log_proportions,
@@ -45,7 +176,28 @@ class MFA(MM):
             params["error"],
         )
     
-    def params_checker(self, params, nonneg=True):
+    def params_checker(self, params):
+        """Verifies that the model parameters are valid.
+        
+        Parameters
+        ----------
+        params : dict
+            Dictionary of named parameters to be checked,
+            of the same format as the return value of `MFA.init_params`.
+        
+        Returns
+        -------
+        None
+        
+        Raises
+        ------
+        AssertionError
+            Upon test failure.
+        
+        See Also
+        --------
+        MFA.init_params
+        """
         p = self.num_dim
         q = np.shape(params["fac_loadings"])[-1]
         proportions = []
@@ -74,6 +226,29 @@ class MFA(MM):
         return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
     def labels(self, data, params):
+        """Assigns clusters to data, based on given parameters.
+
+        This cluster assignment is "hard", in the sense that it returns one cluster for each data point,
+        unlike "soft" classifiers that return a probability distribution over clusters for each data point.
+
+        Parameters
+        ----------
+        data : (..., N, D) ndarray
+            D-dimensional input of (..., N) datapoints to be labelled.
+        params : dict
+            Dictionary of named parameters, of the same format as
+            the return value of `MFA.init_params`.
+        
+        Returns
+        -------
+        labels : (..., N) ndarray
+            A {1,...,num_components}-valued ndarray with as many elements as datapoints.
+            Each value corresponds to a "hard" cluster assignment.
+        
+        See Also
+        --------
+        MFA.init_params
+        """
         cluster_lls = []
 
         for log_proportion, mean, cov_sqrt, error in zip(*self.unpack_params(params)):
@@ -85,6 +260,33 @@ class MFA(MM):
         return np.argmax(np.array(cluster_lls).T, axis=1)
 
     def fit(self, init_params, opt_routine, **kargs):
+        """Fits MFA parameters to the data of the model instance.
+
+        This is done by calling the supplied optimization routine `opt_routine`
+        with the supplied parameter initializations `init_params`.
+
+        Parameters
+        ----------
+        init_params : dict
+            Dictionary of named parameters, of the same format as
+            the return value of `MFA.init_params`.
+            This is used an initial input to the optimization routine.
+        opt_routine : {'grad_descent','rms_prop','adam','Newton-CG'}
+            The optimization routine to be called.
+            Must be one of the strings listed above.
+        **kargs : dict, optional
+        Other parameters (passed to the `opt_routine` call). 
+
+        Returns
+        -------
+        None
+            However, the attribute `params_store` is updated as a side effect.
+
+        See Also
+        --------
+        MFA.objective : loss function for the optimization
+        
+        """
         self.params_store = []
         flattened_obj, unflatten, flattened_init_params = flatten_func(
             self.objective, init_params

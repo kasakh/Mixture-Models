@@ -11,7 +11,7 @@ class TMM(GMM):
     The differences lie in the parametrization and likelihood/PDF calculation.
     """
 
-    def init_params(self, num_components, scale=1.0):
+    def init_params(self, num_components, scale=1.0, use_kmeans=False, **kwargs):
         """Initialize the mixture-of-t model with random parameters.
 
         Parameters
@@ -40,12 +40,21 @@ class TMM(GMM):
             
             where D = number of data dimensions.
         
-        
+        Other Parameters
+        ----------------
+        use_kmeans : bool, optional
+            If true, `means` are initialized from a fit of the k-means clustering algorithm,
+            otherwise (the default) they are randomized like the other parameters.
+        **kwargs : dict
+            Optional arguments passed to the k-means algorithm,
+            specifically to the implementation `sklearn.cluster.KMeans`.
+
         See Also
         --------
         TMM.likelihood : interprets each parameter in terms of
                          its contribution to the log-likelihood
         GMM.init_params : corresponding method for Gaussian mixture models
+        sklearn.cluster.KMeans
         """
         self.num_clust_checker(num_components)
         D = self.num_dim
@@ -54,7 +63,7 @@ class TMM(GMM):
 
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": np.random.randn(num_components, D) * scale,
+            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, D) * scale,
             "sqrt_covs": np.zeros((num_components, D, D)) + np.eye(D),
             "log_dofs": np.random.randn(num_components),
             
