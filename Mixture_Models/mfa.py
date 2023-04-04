@@ -87,7 +87,7 @@ class MFA(MM):
 
     def kmeans(self,num_components,**kwargs):
         """Runs k-means on the data to obtain a reasonable initialization."""
-        return KMeans(num_components,kwargs).fit(self.data).cluster_centers_
+        return KMeans(num_components,**kwargs).fit(self.data).cluster_centers_
 
     def init_params(self, num_components, q, scale=1.0, use_kmeans=False, **kwargs):
         """Initialize the MFA with random parameters.
@@ -329,7 +329,7 @@ class MFA(MM):
         
         def callback(flattened_params):
             params = unflatten(flattened_params)
-            self.params_checker(params,nonneg=False)
+            self.params_checker(params)
             likelihood = self.likelihood(params)
             if not np.isfinite(likelihood):
                 raise ValueError("Log likelihood is {}".format(likelihood))

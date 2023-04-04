@@ -340,7 +340,7 @@ class Mclust(MM):
     
     def kmeans(self,num_components,**kwargs):
         """Runs k-means on the data to obtain a reasonable initialization."""
-        return KMeans(num_components,kwargs).fit(self.data).cluster_centers_
+        return KMeans(num_components,**kwargs).fit(self.data).cluster_centers_
 
     def labels(self, data, params):
         """Assigns clusters to data, based on given parameters.
