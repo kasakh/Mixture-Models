@@ -74,7 +74,7 @@ def run_experiment(method,n,p,K,
 
     if export_results:
         #create a unique filepath
-        filepath = '_'.join([str(x) for x in [method,n,p,K,prop_informative,balance,constrained,fit_constrained]])
+        filepath = '_'.join([str(x) for x in [method,n,p,K,prop_informative,balance,constrained,fit_constrained]])+'.json'
         utils.create_run({
             'method':method,'n':n,'p':p,'K':K,
             'prop_informative':prop_informative,'balance':balance,
