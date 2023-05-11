@@ -51,9 +51,12 @@ def check_fromfile(MM,init_params,opt_routine,fit_args,filepath,metrics):
     params_store = MM.fit(init_params,opt_routine,**fit_args)
     actual_metrics = {metric:[getattr(MM,metric)(param) for param in params_store] for metric in metrics}
     actual_labels = np.array(MM.labels(MM.data,params_store[-1]))
-    #create_run([params_store,actual_metrics, actual_labels],filepath)
-    'Uncomment the above line when testing for the first time, this creates and exports the results.'
-    with open(os.path.join('tests',filepath)) as param_file:
+
+    filepath = os.path.join('tests',filepath)
+    if not os.path.isfile(filepath): #create the file
+        create_run([params_store,actual_metrics, actual_labels],filepath)
+    
+    with open(filepath) as param_file:
         expected_params_store, expected_metrics, expected_labels = json.load(param_file)
     assert len(params_store) == len(expected_params_store)
     for i in range(len(params_store)):
@@ -69,5 +72,5 @@ def create_run(run,filepath):
             if isinstance(obj, np.ndarray):
                 return obj.tolist()
             return json.JSONEncoder.default(self, obj)
-    with open(os.path.join('tests',filepath),'w') as param_file:
+    with open(filepath,'w') as param_file:
         json.dump(run,param_file,cls=NumpyEncoder)

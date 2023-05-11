@@ -241,8 +241,9 @@ class GMM(MM):
         cluster_lls = []
 
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
+            #calculate a stable version of mn
 
-            cluster_lls.append(log_proportion + self.mvn_logpdf(data, mean, cov_sqrt))
+            cluster_lls.append(log_proportion + mvn.logpdf(data, mean, cov_sqrt.T @ cov_sqrt))
 
         return np.argmax(np.array(cluster_lls).T, axis=1)
 
@@ -282,10 +283,7 @@ class GMM(MM):
         def callback(flattened_params):
             params = unflatten(flattened_params)
             self.params_checker(params,nonneg=False)
-            likelihood = self.likelihood(params)
-            if not np.isfinite(likelihood):
-                raise ValueError("Log likelihood is {}".format(likelihood))
-            print("Log likelihood {}".format(likelihood))
+            self.report_likelihood(self.likelihood(params))
             self.params_store.append(params)
 
         self.optimize(

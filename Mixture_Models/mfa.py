@@ -1,6 +1,7 @@
 from .mixture_models import *
 from .checkers import *
 import autograd.numpy as np
+import autograd.scipy.stats.multivariate_normal as mvn
 from sklearn.cluster import KMeans
 
 class MFA(MM):
@@ -69,7 +70,7 @@ class MFA(MM):
 
     def alt_objective(self, params):
         """Calculates the negative log-likelihood for the MFA model."""
-        return -self.fac_log_likelihood_alt(params, self.data)
+        return -self.fac_log_likelihood(params, self.data)
 
     def likelihood(self, params):
         """Calculates the log-likelihood for the model."""
@@ -242,7 +243,7 @@ class MFA(MM):
         cluster_lls = []
         for log_proportion, mean, cov_sqrt, error in zip(*self.unpack_params(params)):
             cov = (cov_sqrt @ cov_sqrt.T) + (np.diag(error) @ np.diag(error))
-            cluster_lls.append(log_proportion + self.mvn_cov_logpdf(data, mean, cov))
+            cluster_lls.append(log_proportion + mvn.logpdf(data, mean, cov))
         return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
     def fac_log_likelihood_alt(self, params, data):
@@ -288,9 +289,7 @@ class MFA(MM):
 
         for log_proportion, mean, cov_sqrt, error in zip(*self.unpack_params(params)):
             cov = (cov_sqrt @ cov_sqrt.T) + (np.diag(error) @ np.diag(error))
-            cluster_lls.append(
-                log_proportion + self.mvn_logpdf(data, mean, np.linalg.cholesky(cov).T)
-            )
+            cluster_lls.append(log_proportion + mvn.logpdf(data, mean, cov))
 
         return np.argmax(np.array(cluster_lls).T, axis=1)
 
@@ -330,10 +329,7 @@ class MFA(MM):
         def callback(flattened_params):
             params = unflatten(flattened_params)
             self.params_checker(params)
-            likelihood = self.likelihood(params)
-            if not np.isfinite(likelihood):
-                raise ValueError("Log likelihood is {}".format(likelihood))
-            print("Log likelihood {}".format(likelihood))
+            self.report_likelihood(self.likelihood(params))
             self.params_store.append(params)
 
         self.optimize(

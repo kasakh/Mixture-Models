@@ -370,7 +370,7 @@ class Mclust(MM):
         cluster_lls = []
         for log_proportion, mean, shape, orientation, volume in zip(*self.unpack_params(params)):
             cov = volume * orientation @ shape @ orientation.T
-            cluster_lls.append(log_proportion + mvn.logpdf(self.data, mean, cov))
+            cluster_lls.append(log_proportion + mvn.logpdf(data, mean, cov))
 
         return np.argmax(np.array(cluster_lls).T,axis=1)
 
@@ -412,10 +412,7 @@ class Mclust(MM):
         def callback(flattened_params):
             params = unflatten(flattened_params)
             self.params_checker(params,nonneg=False)
-            likelihood = self.likelihood(params)
-            if not np.isfinite(likelihood):
-                raise ValueError("Log likelihood is {}".format(likelihood))
-            print("Log likelihood {}".format(likelihood))
+            self.report_likelihood(self.likelihood(params))
             self.params_store.append(params)
 
         self.optimize(

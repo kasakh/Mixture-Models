@@ -499,6 +499,12 @@ class MM(object):
             raise ValueError("Input data contains non-finite numbers")
         elif not (np.isreal(data).all()):
             raise ValueError("Input data contains non-real numbers")
+    
+    def report_likelihood(self,likelihood):
+        """Auxiliary function for use in callbacks."""
+        if not np.isfinite(likelihood):
+            raise ValueError("Log likelihood is {}".format(likelihood))
+        print("Log likelihood {}".format(likelihood))
 
     def num_clust_checker(self, K):
         """Verifies that the given number of clusters is consistent with the mixture model data."""

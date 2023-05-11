@@ -155,6 +155,8 @@ class TMM(GMM):
         because they are unconstrained by any assumptions of positivity (or positive definiteness)
         and are hence more amenable to optimization.)
 
+        .. warning:: This implementation is known to be unstable when the number of dimensions D is high.
+
         See Also
         --------
         TMM.init_params
@@ -249,10 +251,7 @@ class TMM(GMM):
         def callback(flattened_params):
             params = unflatten(flattened_params)
             self.params_checker(params,nonneg=False)
-            likelihood = self.likelihood(params)
-            if not np.isfinite(likelihood):
-                raise ValueError("Log likelihood is {}".format(likelihood))
-            print("Log likelihood {}".format(likelihood))
+            self.report_likelihood(self.likelihood(params))
             self.params_store.append(params)
 
         self.optimize(
