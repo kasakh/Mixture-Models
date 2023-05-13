@@ -1,3 +1,7 @@
+"""Code for the base mixture model class.
+
+"""
+
 from __future__ import absolute_import
 from __future__ import print_function
 import matplotlib.pyplot as plt
@@ -9,22 +13,87 @@ from scipy.optimize import minimize
 from autograd.scipy.special import logsumexp
 import autograd.scipy.stats.multivariate_normal as mvn
 from autograd.misc.flatten import flatten_func
-from .data import make_pinwheel
 from scipy import linalg
 from sklearn.metrics.cluster import adjusted_rand_score
 from scipy.optimize import OptimizeResult
 
 
 class MM(object):
+    """Base mixture model class.
+
+    This base class (i.e. MM) should not be instantiated explicitly;
+    use the specific subclass according to the desired model (e.g. GMM) instead.
+
+    Parameters
+    ----------
+    data : matrix
+        Input data to be fitted. Must be a real matrix with finite values,
+        e.g. missing values (NA, NaN), +Inf, -Inf are all forbidden.
+    
+    Attributes
+    ----------
+    data
+    num_dim : int
+        Number of variables in the data.
+    num_datapoints : int
+        Number of observations in the data.
+
+    """
+    def __init__(self, data):
+        self.data_checker(data)
+        self.data = np.copy(data)
+        self.num_dim = np.shape(self.data)[1]
+        self.num_datapoints = np.shape(self.data)[0]
+
     def mvn_logpdf(self, X, mu, cov_sqrt):
+        """Computes the multivariate normal log probability density function.
+
+        Parameters
+        ----------
+        X : (..., N, D) ndarray
+            Arguments at which the normal log-pdf is to be evaluated.
+            Here D is the number of dimensions, and N the number of arguments.
+        mu : (..., D) vector
+            Mean vector. Must be broadcastable to the same shape as X.
+        cov_sqrt : (..., D, D) matrix
+            Nonsingular matrix. Must be conformable with `X-mu`.
+
+        Returns
+        -------
+        mvn_logpdf : (..., N)
+            Values of the D-dimensional normal log-pdf evaluated at X.
+        
+        Notes
+        -----
+        The multivariate normal probability density function is traditionally specified by
+
+        .. math:: f(x|\mu,\Sigma) = |2\pi\Sigma|^{-1/2} \cdot \exp\left\{-(x-\mu)^T\Sigma^{-1}(x-\mu)/2\right}
+
+        for argument :math:`x`, mean vector :math:`\mu` and covariance matrix :math:`\Sigma`.
+
+        This method differs from the traditional specification in two respects:
+        Firstly, instead of being parametrized by covariance matrix :math:`\Sigma`,
+        it takes as argument the (Cholesky) square root :math:`\Sigma^{1/2}` such that :math:`\Sigma^{1/2}\Sigma^{1/2}=\Sigma`.
+        Secondly, instead of returning :math:`f`, it returns the logarithm :math:`\log f` instead.
+
+        Examples
+        --------
+        >>> X = np.arange(6).reshape((2,3))
+        >>> mu = np.array([2,3,4])
+        >>> cov_sqrt = np.eye(3)
+        >>> MM(X).mvn_logpdf(X, mu, cov_sqrt)
+        array([-8.7568156, -4.2568156])
+        """
         return -0.5 * np.log(
             np.linalg.det(2 * np.pi * cov_sqrt.T @ cov_sqrt)
         ) - 0.5 * np.sum(((X - mu) @ np.linalg.inv(cov_sqrt)) ** 2, axis=1)
 
     def log_normalize(self, x):
+        """Given a log vector of unnormalized probabilities, returns a log vector of normalized probabilities."""
         return x - logsumexp(x)
 
     def gmm_log_likelihood(self, params, data):
+        """Calculates the log-likelihood for the GMM model."""
         cluster_lls = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
 
@@ -33,6 +102,7 @@ class MM(object):
         return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
     def alt_gmm_log_likelihood(self, params, data):
+        """Calculates the log-likelihood for the GMM model."""
         cluster_lls = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
             cov = cov_sqrt.T @ cov_sqrt
@@ -52,8 +122,19 @@ class MM(object):
     def plot_gaussian_mixture(self, params, ax):
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
             alpha = np.minimum(1.0, np.exp(log_proportion) * 10)
-            plot_ellipse(ax, mean, cov_sqrt, alpha)
+            self.plot_ellipse(ax, mean, cov_sqrt, alpha)
         # plot_ellipse(ax, mean, cov_sqrt, alpha)
+    
+    def draw_clusters(self, params, input_data=None):
+        if input_data is None:
+            input_data = self.data
+        if np.shape(input_data)[1] != 2:
+            raise ValueError("Input data to be plotted must be 2-dimensional")
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        self.plot_gaussian_mixture(params, ax)
+        ax.plot(input_data[:, 0], input_data[:, 1], 'k.')
+        plt.show()
 
     def kl_mvn(self, m0, S0, m1, S1):
         """
@@ -421,28 +502,28 @@ class MM(object):
                 'opt_routine should be one of {"grad_descent","rms_prop","adam","Newton-CG"} '
             )
 
+    def report_likelihood(self, likelihood):
+        """Auxiliary function for use in callbacks."""
+        if not np.isfinite(likelihood):
+            raise ValueError("Log likelihood is {}".format(likelihood))
+        print("Log likelihood {}".format(likelihood))
+
     def data_checker(self, data):
+        """Verifies that data is of the correct form for a mixture model to be fitted."""
         if np.isnan(data).any():
             raise ValueError("Input data contains NANs")
         elif not (np.isfinite(data).all()):
             raise ValueError("Input data contains non-finite numbers")
         elif not (np.isreal(data).all()):
             raise ValueError("Input data contains non-real numbers")
-        else:
-            self.data = data
-            self.num_dim = np.shape(data)[1]
-            self.num_datapoints = np.shape(data)[0]
 
     def num_clust_checker(self, K):
+        """Verifies that the given number of clusters is consistent with the mixture model data."""
         if np.isnan(K).any():
             raise ValueError("Number of clusters should not be NaN")
         elif not (np.isfinite(K).all()):
             raise ValueError("Number of clusters should not be infinite")
-        elif not (isinstance(K, int)):
-            raise ValueError(
-                "Number of clusters should not be non positive integers or floats or other datatypes; only positive integers are allowed"
-            )
-        elif not (K > 0):
+        elif not (isinstance(K, int) and (K > 0)):
             raise ValueError(
                 "Number of clusters should not be non positive integers or floats or other datatypes; only positive integers are allowed"
             )
