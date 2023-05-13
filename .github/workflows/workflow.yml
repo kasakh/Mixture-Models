@@ -7,17 +7,20 @@ jobs:
       OS: ubuntu-latest
       PYTHON: '3.9'
     steps:
-    - uses: checkout@v2
-      with:
-        fetch-depth: ‘2’
+    - name: Checkout Repo code
+      uses: actions/checkout@v2
+
 
     - name: Setup Python
-      uses: actions/setup-python@master
+      uses: actions/setup-python@v2
       with:
         python-version: 3.7
-    - name: Generate Report
+    - name: Install Dependencies and Generate Report
       run: |
-        pip install coverage pytest
-        coverage run -m pytest tests/
+        python -m pip install --upgrade pip
+	python -m pip install coverage pytest
+        python -m pytest tests/ 
+	coverage run -m pytest tests/
+	coverage report
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v2
