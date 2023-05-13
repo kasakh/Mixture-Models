@@ -124,6 +124,17 @@ class MM(object):
             alpha = np.minimum(1.0, np.exp(log_proportion) * 10)
             self.plot_ellipse(ax, mean, cov_sqrt, alpha)
         # plot_ellipse(ax, mean, cov_sqrt, alpha)
+    
+    def draw_clusters(self, params, input_data=None):
+        if input_data is None:
+            input_data = self.data
+        if np.shape(input_data)[1] != 2:
+            raise ValueError("Input data to be plotted must be 2-dimensional")
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        self.plot_gaussian_mixture(params, ax)
+        ax.plot(input_data[:, 0], input_data[:, 1], 'k.')
+        plt.show()
 
     def kl_mvn(self, m0, S0, m1, S1):
         """
@@ -491,6 +502,12 @@ class MM(object):
                 'opt_routine should be one of {"grad_descent","rms_prop","adam","Newton-CG"} '
             )
 
+    def report_likelihood(self, likelihood):
+        """Auxiliary function for use in callbacks."""
+        if not np.isfinite(likelihood):
+            raise ValueError("Log likelihood is {}".format(likelihood))
+        print("Log likelihood {}".format(likelihood))
+
     def data_checker(self, data):
         """Verifies that data is of the correct form for a mixture model to be fitted."""
         if np.isnan(data).any():
@@ -499,12 +516,6 @@ class MM(object):
             raise ValueError("Input data contains non-finite numbers")
         elif not (np.isreal(data).all()):
             raise ValueError("Input data contains non-real numbers")
-    
-    def report_likelihood(self,likelihood):
-        """Auxiliary function for use in callbacks."""
-        if not np.isfinite(likelihood):
-            raise ValueError("Log likelihood is {}".format(likelihood))
-        print("Log likelihood {}".format(likelihood))
 
     def num_clust_checker(self, K):
         """Verifies that the given number of clusters is consistent with the mixture model data."""

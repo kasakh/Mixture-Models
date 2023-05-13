@@ -1,128 +1,105 @@
-# Installation 
+# Mixture-Models
+
+A Python library for fitting mixture models using gradient based inference.
+Example notebooks are available on the [project Github repo](https://github.com/kasakh/Mixture-Models).
+
+Installation is straightforward:
 
 	pip install Mixture-Models
 
-The github repo with illustration notebooks can be found [here](https://github.com/kasakh/Mixture-Models).
+## Quick Start
 
-# Mixture Models
-This package implements the following mixture models 
+The estimation procedure consists of 3 simple steps:
 
-1. Gaussian Mixture Models (GMM)
+    ### Choose a mixture model to fit on your data
+    my_model = GMM(data)
 
-2. [Mixture Factor Models (MFA)](https://link.springer.com/article/10.1007/s11222-008-9056-0)
+    ### Initialize your model with some parameters    
+    init_params = my_model.init_params(num_components = 3,scale = 0.5)
 
-3. [Parsimonious GMMs (PGMMs)](https://link.springer.com/article/10.1007/s11222-008-9056-0) 
+    ### Learn the parameters using some optimization routine
+    params_store = my_model.fit(init_params,"Newton-CG")
 
- 
-In their original papers, the inference for these models is 
-carried out using Expectation Maximization (EM). However, due to the availability of 
-Automatic Differentiation tools, gradient descent based inference can be carried out 
-for these models. These are four main gradient based optimizers available in this version
+Once the model is trained on the data (which is a `numpy` matrix of shape `(num_datapoints, num_dim)`),
+post-hoc analysis can be performed:
 
+    for params in params_store:
+        print("likelihood",my_model.likelihood(params))
+        print("aic,bic",my_model.aic(params),my_model.bic(params))
+    
+    np.array(my_model.labels(data,params_store[-1])) ## final predicted labels
 
+The [project repo 'Examples' folder](https://github.com/kasakh/Mixture-Models/tree/master/Mixture_Models) includes more detailed illustrations, as well as a `README.md` for advanced users who want to fit custom mixture models,
+or tinker with the settings for the above procedure.
 
-<ul>
-<li>Gradient Descent with Momentum </li>
-<li>RMS-Prop</li>
-<li>ADAM</li>
-<li>Newton-Conjugate Gradient (Newton CG) </li>
-</ul>
+## Background: mixture models
 
+A *mixture model* can be thought of as a probabilistic combination of generative models $f_1$, $f_2$, ..., $f_K$.
+If we let $[p_1, \dots, p_K]$ denote the combination weights,
+then we generate an observation from the mixture model by:
+- using these weights to choose a label $z$ from 1 to K;
+- and then generating an observation from $f_z$.
 
-There are three main motivations for using this package vis-a-vis to existing EM-based packages
-<ol>
-<li>We can fit GMMs to high-dimensional data without any further 
-modeling assumptions. Fitting models without severe modeling constraints can lead 
-to better clustering performance. EM based inference cannot scale to high-dimensional data. </li>
-<li> Has second-order optimization routines like Newton-CG which is faster than first 
-order EM</li>
-<li> No Need to jump between R and Python to fit PGMMs or MFAs. All the mixture models are 
- available under one roof and with just one kind of syntax.</li>
+The *mixture model inference problem* is when you have a sample of observations,
+and must work backwards to learn the parameters that generated it:
+i.e. the probabilities $[p_1, \dots, p_K]$
+as well as the parameters for each of the individual models $f_1$, ..., $f_K$.
 
-</ol>
+The primary purpose of this package is to solve this inference problem
+by estimating the parameters of a given mixture model.
+Models currently implemented include:
 
-## Outline of inference procedure
-Fitting any of the mixture models mentioned above can be done in 
-the following 3 simple steps
+- `GMM`: Standard *Gaussian mixture model*
+    - `GMM_Constrainted`: GMM with common covariance across components
+    - `Mclust`: [MCLUST family](https://sites.stat.washington.edu/raftery/Research/PDF/fraley2003.pdf) of constrained GMMs
+- `MFA`: [*Mixture-of-factor analyzers*](https://link.springer.com/article/10.1007/s11222-008-9056-0)
+    - `PGMM`: [Parsimonious GMM extension](https://link.springer.com/article/10.1007/s11222-008-9056-0) with constraints
+- `TMM`: [*Mixture of t-distributions*](https://www.academia.edu/16834403/Robust_mixture_modelling_using_the_t_distribution?sm=b)
 
+Any *classification problem* can be cast into this framework
+by identifying the clusters with mixture model components.
+Here is an illustration:
 
     ### Simulate some dummy data using the built-in function make_pinwheel
     data = make_pinwheel(radial_std=0.3, tangential_std=0.05, num_classes=3,
                          num_per_class=100, rate=0.4,rs=npr.RandomState(0))
-
-We illustrate the 3 steps using GMM model and Newton-CG method. 
     
-    ### Choose a model to fit on the data
-    GMM_model = GMM(data)
+    ### Plot the three clusters
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(data[:, 0], data[:, 1], 'k.')
+    plt.show()
 
-    ### Initialize your model with some parameters    
-    init_params = GMM_model.init_params(num_components = 3,scale = 0.5)
+The estimation procedure described above can be run on this data
+in order to identify the clusters.
 
-    ### Do inference using 
-    params_store = GMM_model.fit(init_params,"Newton-CG")
+## Note: Automatic differentiation-based inference
 
-## Details of each step in the inference 
-### Choosing the model
-Once you have a some input data, choosing a model is relatively straightforward. 
-    
-    model = GMM(data) ; # For Gaussian Mixture Models (GMMs)
-    # model = GMM_conc(data) # For GMMs which share the same covariance matrix for all components
-    # model = MFA(data)   # For Mixture of Factor Analyzers
-    # model = PGMM(data,constraint="UUU")    # For Parsimonious GMMs, an additional input for the constrained model has to be specified. 
+Inference for mixture models is usually carried out using Expectation Maximization (EM),
+and many software packages have been written to support this.
+However, due to the availability of Automatic Differentiation tools,
+this package instead uses gradient descent to learn the mixture model parameters
+(i.e. step 3 of the above estimation procedure).
+There are three main motivations:
 
-This model initialization step automatically checks if there are any missing/non-finite values in the data. We have detailed complete illustrations
-for each of these models in the 'Examples' folder on Github. 
+1. We can fit models to *high-dimensional data* without any further modeling assumptions.
+Fitting models without severe modeling constraints can lead to better clustering performance.
+EM based inference cannot scale to high-dimensional data.
+2. Gradient descent based inference has *2nd-order optimization routines* like Newton-CG which are faster than 1st-order EM
+3. *Unified interface and syntax to fit other classes of mixture models*, no need to jump between R and Python to fit PGMMs/MFAs/etc.
 
-### Initialize the model parameters
-    
-Each of these models have different input parameters. Further, some parameters have additional constraints. E.g. the mixture weights 
-have to be positive and add up to 1. Similarly, the covariance matrix for each of the components has to be positive definite. To enable,
-gradient descent for such constrained optimization, we have to **_re-parameterize the inputs_**. More specifically, for the mixture weights, we use 
-log-sum-exp trick and for the covariance matrices, we use the decomposition UU^T, where U is a full-rank matrix. 
-Details are in section 3 of [this paper](https://arxiv.org/pdf/2007.12786.pdf). 
-By reparametrizing the inputs, we are converting the constrained optimization problem into an unconstrained optimization problem. 
+Currently, four main gradient based optimizers are available:
 
-For initializing the model with random reparametrized inputs, we use the method `init_params` with the arguments - `num_components` (i.e. number
-of clusters to fit) and `scale` (i.e. the size of the mean vectors and covariances matrices). The scale of initialization parameters plays
-an important role if the data is not normalized. The default parameter for `scale` is `1.0`
+- `"grad_descent"`: Stochastic Gradient Descent (SGD) with momentum
+- `"rms_prop"`: Root-mean-squared propagation (RMS-Prop)
+- `"adam"`: Adaptive moments (ADAM)
+- `"Newton-CG"`: Newton-Conjugate Gradient (Newton CG)
 
-    initial_params = model.init_params(num_components=3,scale=0.5) 
+The details about each optimizer and its optional input parameters are given in the PDF in the 'Examples' folder.
+The output of `fit` method is the set of all points in the parameter space that the optimizer has traversed during the optimization i.e.  list of parameters with the final entry in the list being the final fitted solution.
+We have a detailed notebook `Optimizers_illustration.ipynb` in the 'Examples' folder on Github. 
 
-
-
-Once the `init_params` method is called, parameters corresponding to the `model` class are randomly initialized and returned as a
-dictionary. Here is a sample output for the `initial_params`
-
-    {'log proportions': array([ 0.66579325,  0.35763949, -0.77270015]), 
-    'means': array([[-0.00419192,  0.31066799],
-           [-0.36004278,  0.13275579],
-           [ 0.05427426,  0.00214572]]), 'sqrt_covs': array([[1., 0.],
-           [0., 1.]])}
-
-As you can see, we have `log proportions` (instead of proportions of each component) and `sqrt_covs` (instead of the covariance matrices).
-
-Once the `initial_params` have been defined, we can manually change it to K-Means initialization or any other user-specified initialization.
-Refer the notebook in examples folder for an illustration. 
-
-
-### Choosing the optimizer
-
-    params_store = model.fit(initial_params,"<optimizers_name>") ## optimizers_name can be Netwon-CG, adam,rms_prop, grad_descent
-
-The details about each optimizer and its optional input parameters are given in the PDF in the 'Examples' folder.  The output of `fit` method is the set of all points in the 
-parameter space
-that the optimizer has traversed during the optimization i.e.  list of parameters with the final entry in the list being the final 
-fitted solution. We have a detailed notebook 'Optimizers_illustration.ipynb' in the 'Examples' folder on Github.  
-
-## Post-hoc Analysis
-Once the list of parameters are obtained, we can perform post-hoc analysis as follows:
-
-    for params in params_store:
-        print("likelihood",model.likelihood(params))
-        print("aic,bic",model.aic(params),model.bic(params))
-        
-    
-    np.array(model.labels(data,params_store[-1])) ## Prints the final labels predicted by the model
+-------------------------------------------------------------------------------
 
 If you use this package, please consider citing our research as 
 
