@@ -7,11 +7,12 @@ import time
 def run_experiment(method,n,p,K,
                    prop_informative,balance,constrained,fit_constrained,
                    num_trials=10,scale=5,use_kmeans=True,
-                   optim_params={'learning_rate':0.0003,'mass':0.9,'maxiter':50},
+                   optim_params={'learning_rate':0.0003,'mass':0.9,'tol':1e-06},
                    export_results=False):
     if method not in ["AD","EM"]:
         raise ValueError("method should be one of 'AD' or 'EM'")
     overall_start_time = time.time()
+    num_iters = []
     timetaken = []
     ari = []
     avglogprop = []
@@ -26,16 +27,18 @@ def run_experiment(method,n,p,K,
             if method=="AD":
                 test_GMM = Mclust(data,"VVI") if fit_constrained else GMM(data)
                 init_params = test_GMM.init_params(K,scale,use_kmeans)
-                params = test_GMM.fit(init_params,"grad_descent", **optim_params)[-1]
+                params = test_GMM.fit(init_params,"grad_descent", **optim_params)
             else:
                 test_GMM = GaussianMixture(n_components=K,
                                            covariance_type='diag' if fit_constrained else 'full',
-                                           max_iter=optim_params['maxiter']).fit(data)
+                                           tol=optim_params['tol']).fit(data)
         except:
             continue
         timetaken.append(time.time()-start_time)
 
         if method=="AD":
+            num_iters.append(len(params))
+            params = params[-1]
             labels = np.array(test_GMM.labels(data,params))
             if fit_constrained:
                 fitlogprops, fitmeans, fitcovs = [], [], []
@@ -47,7 +50,7 @@ def run_experiment(method,n,p,K,
                 fitlogprops, fitmeans, fitcovs = test_GMM.unpack_params(params)
                 fitcovs = [np.dot(m,m.transpose()) for m in fitcovs]
         else:
-
+            num_iters.append(test_GMM.n_iter_)
             labels = test_GMM.predict(data)
             fitlogprops = np.log(test_GMM.weights_)
             fitmeans = np.log(test_GMM.means_)
@@ -81,7 +84,8 @@ def run_experiment(method,n,p,K,
             'constrained':constrained,'fit_constrained':fit_constrained,
             'scale':scale,'use_kmeans':use_kmeans,
             'optim_params':optim_params,
-            'timetaken':timetaken,'ari':ari,'avglogprop':avglogprop,
+            'timetaken':timetaken,'num_iters':num_iters,
+            'ari':ari,'avglogprop':avglogprop,
             'avgmean':avgmean,'avgcov':avgcov,
             'start_time':overall_start_time,'end_time':overall_end_time
             },os.path.join('tests',filepath))
