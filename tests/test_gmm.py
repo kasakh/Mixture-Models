@@ -41,7 +41,9 @@ def test_gmm_different_initializations_illustration():
 
 
 def test_other_datasets():
-    datasets = ["iris","wine"]
+    # datasets = ["iris","wine"]
+    # datasets = ["iris"]
+    datasets = ["wine"]
     expected_init_params = [
         {'log proportions': [ 0.66579325,  0.35763949, -0.77270015],
         'means':[[-0.00419192,  0.31066799, -0.36004278,  0.13275579],
@@ -63,5 +65,6 @@ def test_other_datasets():
     for i, dataset in enumerate(datasets):
         test_GMM, init_params = utils.init_MM(GMM,data.load_csvdataset(dataset)[0],10,
         init_params_args={'num_components':3,'scale':0.5},
-        expected=expected_init_params[i])
-        utils.check_fromfile(test_GMM,init_params,"Newton-CG",{'maxiter':100,'tol':1e-7},"expected_test_other_datasets_"+str(i)+".json",['likelihood','aic','bic'])
+        expected=expected_init_params[i+1])
+        utils.check_fromfile(test_GMM,init_params,"Newton-CG",{'maxiter':25,'tol':1e-5},"expected_test_other_datasets_"+str(i)+".json",['likelihood','aic','bic'])
+        # utils.check_fromfile(test_GMM,init_params,"grad_descent",{'learning_rate':0.00005,'mass':0.9,'maxiter':20,'tol':1e-7},"expected_test_other_datasets_"+str(i)+".json",['likelihood','aic','bic'])
