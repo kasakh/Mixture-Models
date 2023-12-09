@@ -1,8 +1,7 @@
 """This example shows how to define the gradient of your own functions.
 This can be useful for speed, numerical stability, or in cases where
 your code depends on external library calls."""
-from __future__ import absolute_import
-from __future__ import print_function
+
 import autograd.numpy as np
 import autograd.numpy.random as npr
 

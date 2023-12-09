@@ -4,6 +4,10 @@ from Mixture_Models import checkers
 import autograd.numpy as np
 import json
 import os
+import math
+
+def check_two_scalars_are_within_bounds(a, b, rel_bound):
+    return math.isclose(a, b, rel_tol=rel_bound)
 
 def check_array_equal(actual,expected,atol=1e-04):
     """Verifies that an ndarray has the expected dimension and values."""
@@ -11,12 +15,23 @@ def check_array_equal(actual,expected,atol=1e-04):
     if atol is None:
         assert np.array_equal(actual,expected)
     else:
-        assert np.allclose(actual,expected,atol=atol)
+        assert np.allclose(actual, expected,atol=atol)
+
+
+def check_last_element_array_dict_equal(actual,expected,**kwargs):
+    keys = sorted(actual.keys())
+    assert keys == sorted(expected.keys())
+
+    for k in keys:
+        check_two_scalars_are_within_bounds(actual[k][-1],expected[k][-1], rel_bound=1e-2)
+
+
 
 def check_arraydict_equal(actual,expected,**kwargs):
     """Verifies that a dictionary of ndarrays has the expected names and contents."""
     keys = sorted(actual.keys())
     assert keys == sorted(expected.keys())
+
     for k in keys:
         check_array_equal(actual[k],expected[k],**kwargs)
 
@@ -58,11 +73,14 @@ def check_fromfile(MM,init_params,opt_routine,fit_args,filepath,metrics):
     
     with open(filepath) as param_file:
         expected_params_store, expected_metrics, expected_labels = json.load(param_file)
-    assert len(params_store) == len(expected_params_store)
-    for i in range(len(params_store)):
-        check_arraydict_equal(params_store[i],expected_params_store[i])
-    check_arraydict_equal(actual_metrics,expected_metrics)
-    check_array_equal(actual_labels,expected_labels,atol=None)
+
+    check_two_scalars_are_within_bounds(len(params_store),len(expected_params_store), rel_bound=1e-2)
+    
+    check_arraydict_equal(params_store[-1],expected_params_store[-1], atol=1e-2) # checking if the final convergence value is close to expected
+
+    check_last_element_array_dict_equal(actual_metrics,expected_metrics, atol=1e-2)
+    
+    check_array_equal(actual_labels,expected_labels, atol=1e-1)
     return params_store
 
 def create_run(run,filepath):

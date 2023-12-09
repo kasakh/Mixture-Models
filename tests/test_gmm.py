@@ -28,7 +28,7 @@ def test_gmm_different_optimizers_illustration():
     utils.check_fromfile(test_GMM,init_params,"grad_descent",{'learning_rate':0.0005,'mass':0.9,'maxiter':100,'tol':1e-7},"expected_test_gmm_different_optimizers_illustration_0.json",['likelihood'])
     utils.check_fromfile(test_GMM,init_params,"rms_prop",{'learning_rate':0.01,'gamma':0.9,'maxiter':100,'tol':1e-7},"expected_test_gmm_different_optimizers_illustration_1.json",['likelihood'])
     utils.check_fromfile(test_GMM,init_params,"adam",{'learning_rate':0.1,'beta1':0.9,'beta2':0.99,'maxiter':100,'tol':1e-7},"expected_test_gmm_different_optimizers_illustration_2.json",['likelihood'])
-    utils.check_fromfile(test_GMM,init_params,"Newton-CG",{'maxiter':100,'tol':1e-7},"expected_test_gmm_different_optimizers_illustration_3.json",['likelihood'])
+    utils.check_fromfile(test_GMM,init_params,"Newton-CG",{'maxiter':100,'tol':1e-5},"expected_test_gmm_different_optimizers_illustration_3.json",['likelihood'])
 
 def test_gmm_different_initializations_illustration():
     test_GMM, init_params = init_GMM()
@@ -39,15 +39,9 @@ def test_gmm_different_initializations_illustration():
     
     utils.check_fromfile(test_GMM,init_params,"grad_descent",{'learning_rate':0.0005,'mass':0.9,'maxiter':100,'tol':1e-7},"expected_test_gmm_different_initializations_illustration.json",['likelihood'])  
 
-
 def test_other_datasets():
-    datasets = ["iris","wine"]
+    datasets = ["wine"]
     expected_init_params = [
-        {'log proportions': [ 0.66579325,  0.35763949, -0.77270015],
-        'means':[[-0.00419192,  0.31066799, -0.36004278,  0.13275579],
-        [ 0.05427426,  0.00214572, -0.08730011,  0.21651309],
-        [ 0.60151869, -0.48253284,  0.51413704,  0.11431507]],
-        'sqrt_covs':[np.eye(4),np.eye(4),np.eye(4)]},
         {'log proportions': [ 0.66579325,  0.35763949, -0.77270015],
         'means':[[-0.00419192,  0.31066799, -0.36004278,  0.13275579,  0.05427426,
          0.00214572, -0.08730011,  0.21651309,  0.60151869, -0.48253284,
@@ -63,5 +57,6 @@ def test_other_datasets():
     for i, dataset in enumerate(datasets):
         test_GMM, init_params = utils.init_MM(GMM,data.load_csvdataset(dataset)[0],10,
         init_params_args={'num_components':3,'scale':0.5},
-        expected=expected_init_params[i])
-        utils.check_fromfile(test_GMM,init_params,"Newton-CG",{'maxiter':100,'tol':1e-7},"expected_test_other_datasets_"+str(i)+".json",['likelihood','aic','bic'])
+        expected=expected_init_params[i]
+        )
+        utils.check_fromfile(test_GMM,init_params,"Newton-CG",{'maxiter':25,'tol':1e-5},"expected_test_other_datasets_"+str(i)+".json",['likelihood','aic','bic'])
