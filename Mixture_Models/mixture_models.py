@@ -194,61 +194,61 @@ class MM(object):
         # print(tr_term,det_term,quad_term)
         return 0.5 * (tr_term + det_term + quad_term - N)
 
-    def kl_div_tot(self, means, covariances):
-        kl_divs = []
-        for i in range(0, means.shape[0]):
-            # print(i)
-            for j in range(i, means.shape[0]):
-                # print(i,j)
-                kl_divs.append(
-                    self.kl_mvn(means[i], covariances[i], means[j], covariances[j])
-                )
-        # print(kl_divs)
-        return np.sum(kl_divs)
+    # def kl_div_tot(self, means, covariances):
+    #     kl_divs = []
+    #     for i in range(0, means.shape[0]):
+    #         # print(i)
+    #         for j in range(i, means.shape[0]):
+    #             # print(i,j)
+    #             kl_divs.append(
+    #                 self.kl_mvn(means[i], covariances[i], means[j], covariances[j])
+    #             )
+    #     # print(kl_divs)
+    #     return np.sum(kl_divs)
 
-    def kl_div_inverse_tot(self, means, covariances):
-        kl_divs = []
-        for i in range(0, means.shape[0]):
-            # print(i)
-            for j in range(i, means.shape[0]):
-                # print(i,j)
-                kl_divs.append(
-                    self.kl_inverse_mvn(
-                        means[i], covariances[i], means[j], covariances[j]
-                    )
-                )
-        # print(kl_divs)
-        return np.sum(kl_divs)
+    # def kl_div_inverse_tot(self, means, covariances):
+    #     kl_divs = []
+    #     for i in range(0, means.shape[0]):
+    #         # print(i)
+    #         for j in range(i, means.shape[0]):
+    #             # print(i,j)
+    #             kl_divs.append(
+    #                 self.kl_inverse_mvn(
+    #                     means[i], covariances[i], means[j], covariances[j]
+    #                 )
+    #             )
+    #     # print(kl_divs)
+    #     return np.sum(kl_divs)
 
-    def kl_div_tot_print(self, means, covariances):
-        kl_divs = []
-        for i in range(0, means.shape[0]):
-            # print(i)
-            for j in range(i, means.shape[0]):
-                # print(i,j)
-                kl_divs.append(
-                    self.kl_mvn(means[i], covariances[i], means[j], covariances[j])
-                )
-        print("####start of KLB####")
-        print("pairwise KLF", kl_divs)
-        print(" total KLF ", np.sum(kl_divs))
-        return "####end of KLF####"
+    # def kl_div_tot_print(self, means, covariances):
+    #     kl_divs = []
+    #     for i in range(0, means.shape[0]):
+    #         # print(i)
+    #         for j in range(i, means.shape[0]):
+    #             # print(i,j)
+    #             kl_divs.append(
+    #                 self.kl_mvn(means[i], covariances[i], means[j], covariances[j])
+    #             )
+    #     print("####start of KLB####")
+    #     print("pairwise KLF", kl_divs)
+    #     print(" total KLF ", np.sum(kl_divs))
+    #     return "####end of KLF####"
 
-    def kl_div_inverse_tot_print(self, means, covariances):
-        kl_divs = []
-        for i in range(0, means.shape[0]):
-            # print(i)
-            for j in range(i, means.shape[0]):
-                # print(i,j)
-                kl_divs.append(
-                    self.kl_inverse_mvn(
-                        means[i], covariances[i], means[j], covariances[j]
-                    )
-                )
-        print("####start of KLB####")
-        print("pairwise KLB ", kl_divs)
-        print("total KLB", np.sum(kl_divs))
-        return "####end of KLB####"
+    # def kl_div_inverse_tot_print(self, means, covariances):
+    #     kl_divs = []
+    #     for i in range(0, means.shape[0]):
+    #         # print(i)
+    #         for j in range(i, means.shape[0]):
+    #             # print(i,j)
+    #             kl_divs.append(
+    #                 self.kl_inverse_mvn(
+    #                     means[i], covariances[i], means[j], covariances[j]
+    #                 )
+    #             )
+    #     print("####start of KLB####")
+    #     print("pairwise KLB ", kl_divs)
+    #     print("total KLB", np.sum(kl_divs))
+    #     return "####end of KLB####"
 
     def sgd1(
         self,
