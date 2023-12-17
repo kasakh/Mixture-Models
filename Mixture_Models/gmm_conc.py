@@ -17,7 +17,7 @@ class GMM_Constrainted(GMM):
         num_components : int
             Number of mixture components (i.e. clusters) to be fitted.
             Must be a positive integer :math:`\geq` number of input datapoints.
-        
+
         scale : float, optional
             Scale parameter, defaults to 1.
             Corresponds roughly to the amount of heterogeneity between clusters.
@@ -33,7 +33,7 @@ class GMM_Constrainted(GMM):
               Real matrix of shape (num_components, D)
             sqrt_covs
               Real matrix of shape (D, D)
-            
+
             where D = number of data dimensions.
 
         Other Parameters
@@ -56,25 +56,27 @@ class GMM_Constrainted(GMM):
         # rs = npr.seed(1)
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, D) * scale,
+            "means": self.kmeans(num_components, **kwargs)
+            if use_kmeans
+            else np.random.randn(num_components, D) * scale,
             "sqrt_covs": np.zeros((D, D)) + np.eye(D),
         }
 
     def unpack_params(self, params):
         """Expands a dictionary of named parameters into a tuple.
-        
+
         Parameters
         ----------
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `GMM_Constrainted.init_params`.
-        
+
         Returns
         -------
         expanded_params : tuple
             A tuple of expanded model parameters,
             as can be used for calculating the model log-likelihood.
-        
+
         See Also
         --------
         GMM_Constrainted.init_params

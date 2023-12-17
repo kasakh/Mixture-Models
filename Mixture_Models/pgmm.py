@@ -1,6 +1,7 @@
 from .mfa import *
 import autograd.numpy as np
 
+
 class PGMM(MFA):
     """
     Class for parsimonious Gaussian mixture models (PGMMs) as specified in McNicholas and Murphy (2008).
@@ -16,7 +17,7 @@ class PGMM(MFA):
     constraint : {'CCC','CCU','CUC','CUU','UCC','UCU','UUC','UUU'}
         Name of the model to be initialized.
         The interpretation of these identifiers follows the specification in [1]_.
-    
+
     Attributes
     ----------
     constraint : {'CCC','CCU','CUC','CUU','UCC','UCU','UUC','UUU'}
@@ -46,6 +47,7 @@ class PGMM(MFA):
     .. [1] McNicholas, Paul David, and Thomas Brendan Murphy. "Parsimonious Gaussian mixture models."
        Statistics and Computing 18 (2008): 285-296.
     """
+
     def __init__(self, data, constraint="CCC"):
         self.constraint_set = {"CCC", "CCU", "CUC", "CUU", "UCC", "UCU", "UUC", "UUU"}
         if constraint in self.constraint_set:
@@ -64,7 +66,7 @@ class PGMM(MFA):
         num_components : int
             Number of mixture components (i.e. clusters) to be fitted.
             Must be a positive integer :math:`\geq` number of input datapoints.
-        
+
         q : int
             Number of latent (unobserved) factors in the covariance matrices.
             Must be a positive integer < number of data dimensions.
@@ -78,7 +80,7 @@ class PGMM(MFA):
         init_params : dict
             Dictionary of named parameters, whose entries depend on
             the `constraint` attribute set upon initialization.
-            
+
             Consists of the following entries:
 
             log proportions
@@ -89,7 +91,7 @@ class PGMM(MFA):
               Vector of real matrices of shape (p, q) or (num_components, p, q), depending on constraint
             error
               Real matrix of shape (1) or (p) or (num_components, p), depending on constraint
-            
+
             where p = number of data dimensions.
 
         Other Parameters
@@ -150,21 +152,21 @@ class PGMM(MFA):
             return_dict["fac_loadings"] = np.random.randn(p, q) * scale
             return_dict["error"] = np.random.randn(p) * scale
             self.num_freeparam = p * q - 0.5 * q * (q - 1) + p
-        
+
         self.num_freeparam = self.num_freeparam + num_components * (1 + p) - 1
 
         return return_dict
 
     def unpack_params(self, params):
         """Expands a dictionary of named parameters into a tuple.
-        
+
         Parameters
         ----------
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `PGMM.init_params`,
             and compatible with the instance value of the `constraint` attribute.
-        
+
         Returns
         -------
         expanded_params : tuple
@@ -187,12 +189,14 @@ class PGMM(MFA):
                 [params["fac_loadings"]] * np.size(normalized_log_proportions)
             )
             error = np.array(
-                [[params["error"][0]] * self.num_dim] * np.size(normalized_log_proportions)
+                [[params["error"][0]] * self.num_dim]
+                * np.size(normalized_log_proportions)
             )
         if self.constraint == "UCC":
             fac_loadings = params["fac_loadings"]
             error = np.array(
-                [[params["error"][0]] * self.num_dim] * np.size(normalized_log_proportions)
+                [[params["error"][0]] * self.num_dim]
+                * np.size(normalized_log_proportions)
             )
         if self.constraint == "UCU":
             fac_loadings = params["fac_loadings"]

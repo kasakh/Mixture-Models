@@ -4,12 +4,13 @@ import autograd.numpy as np
 import autograd.scipy.stats.multivariate_normal as mvn
 from sklearn.cluster import KMeans
 
+
 class MFA(MM):
     """Class for mixture-of-factor-analyzers (MFA) models.
 
     Inherits from the base MM class, and is instantiated the same way.
     It also has the following additional attributes:
-    
+
     Attributes
     ----------
     num_freeparam : int
@@ -17,7 +18,7 @@ class MFA(MM):
     params_store : list
         Initialized after calling method `fit`.
         Contains the history of fitted parameters across iterations.
-    
+
     Methods
     -------
     init_params(num_components, scale=1.0)
@@ -26,7 +27,7 @@ class MFA(MM):
         Runs optimization routine with the given initialization.
     labels(data, params)
         Returns 'hard' cluster assignments for given data, based on fitted parameters.
-    
+
     See Also
     --------
     PGMM : Child class allowing for constrained loading and/or error matrices.
@@ -53,7 +54,7 @@ class MFA(MM):
         -------
         mvn_logpdf : (..., N)
             Values of the D-dimensional normal log-pdf evaluated at X.
-        
+
         Notes
         -----
         The multivariate normal probability density function is specified by
@@ -86,9 +87,9 @@ class MFA(MM):
             self.num_datapoints
         ) * self.num_freeparam + 2 * self.alt_objective(params)
 
-    def kmeans(self,num_components,**kwargs):
+    def kmeans(self, num_components, **kwargs):
         """Runs k-means on the data to obtain a reasonable initialization."""
-        return KMeans(num_components,**kwargs).fit(self.data).cluster_centers_
+        return KMeans(num_components, **kwargs).fit(self.data).cluster_centers_
 
     def init_params(self, num_components, q, scale=1.0, use_kmeans=False, **kwargs):
         """Initialize the MFA with random parameters.
@@ -98,7 +99,7 @@ class MFA(MM):
         num_components : int
             Number of mixture components (i.e. clusters) to be fitted.
             Must be a positive integer :math:`\geq` number of input datapoints.
-        
+
         q : int
             Number of latent (unobserved) factors in the covariance matrices.
             Must be a positive integer < number of data dimensions.
@@ -120,7 +121,7 @@ class MFA(MM):
               Vector of real matrices of shape (num_components, p, q)
             error
               Real matrix of shape (num_components, p)
-            
+
             where p = number of data dimensions.
 
         Other Parameters
@@ -142,29 +143,33 @@ class MFA(MM):
         """
         self.num_clust_checker(num_components)
         p = self.num_dim
-        self.num_freeparam = num_components * (1 + p + p * q - 0.5 * q * (q - 1) + p) - 1
+        self.num_freeparam = (
+            num_components * (1 + p + p * q - 0.5 * q * (q - 1) + p) - 1
+        )
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, p) * scale,
+            "means": self.kmeans(num_components, **kwargs)
+            if use_kmeans
+            else np.random.randn(num_components, p) * scale,
             "fac_loadings": np.random.rand(num_components, p, q) * scale,
             "error": np.random.randn(num_components, p) * scale,
         }
 
     def unpack_params(self, params):
         """Expands a dictionary of named parameters into a tuple.
-        
+
         Parameters
         ----------
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `MFA.init_params`.
-        
+
         Returns
         -------
         expanded_params : tuple
             A tuple of expanded model parameters,
             as can be used for calculating the model log-likelihood.
-        
+
         See Also
         --------
         MFA.init_params
@@ -176,25 +181,25 @@ class MFA(MM):
             params["fac_loadings"],
             params["error"],
         )
-    
+
     def params_checker(self, params):
         """Verifies that the model parameters are valid.
-        
+
         Parameters
         ----------
         params : dict
             Dictionary of named parameters to be checked,
             of the same format as the return value of `MFA.init_params`.
-        
+
         Returns
         -------
         None
-        
+
         Raises
         ------
         AssertionError
             Upon test failure.
-        
+
         See Also
         --------
         MFA.init_params
@@ -203,16 +208,16 @@ class MFA(MM):
         q = np.shape(params["fac_loadings"])[-1]
         proportions = []
         for log_proportion, mean, cov_sqrt, error in zip(*self.unpack_params(params)):
-            check_dim(log_proportion,()) and check_pos(-log_proportion)
+            check_dim(log_proportion, ()) and check_pos(-log_proportion)
             proportions.append(np.exp(log_proportion))
-            check_dim(mean,(p,)) and check_finite(mean)
-            check_dim(cov_sqrt,(p,q)) and check_finite(cov_sqrt)
-            check_dim(error,(p,)) and check_finite(mean)
+            check_dim(mean, (p,)) and check_finite(mean)
+            check_dim(cov_sqrt, (p, q)) and check_finite(cov_sqrt)
+            check_dim(error, (p,)) and check_finite(mean)
         check_probdist(np.array(proportions))
 
     def fac_log_likelihood(self, params, data):
         """Calculates the log-likelihood for the MFA model.
-        
+
         Notes
         -----
         The input `params` is to be a dictionary of named parameters,
@@ -230,7 +235,7 @@ class MFA(MM):
         evaluated on datapoint x, where :math:`\mu_i = \mathtt{means}_i` and :math:`\Sigma_i`
         are the component's mean and covariance matrices respectively,
         with the latter being defined in terms of the remaining parameters as
-        
+
         .. math:: \Sigma_i = \mathtt{cov_sqrts}_i\mathtt{cov_sqrts}_i^\top + diag\left[\mathtt{error}_i \circ \mathtt{error}_i\right]
 
         where :math:`\circ` is the Hadamard product of the vector :math:`\mathtt{error}_i` with itself,
@@ -248,7 +253,7 @@ class MFA(MM):
 
     def fac_log_likelihood_alt(self, params, data):
         """Alternate expression for the log-likelihood of the MFA model.
-        
+
         See Also
         --------
         MFA.fac_log_likelihood
@@ -274,13 +279,13 @@ class MFA(MM):
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `MFA.init_params`.
-        
+
         Returns
         -------
         labels : (..., N) ndarray
             A {1,...,num_components}-valued ndarray with as many elements as datapoints.
             Each value corresponds to a "hard" cluster assignment.
-        
+
         See Also
         --------
         MFA.init_params
@@ -309,7 +314,7 @@ class MFA(MM):
             The optimization routine to be called.
             Must be one of the strings listed above.
         **kargs : dict, optional
-        Other parameters (passed to the `opt_routine` call). 
+        Other parameters (passed to the `opt_routine` call).
 
         Returns
         -------
@@ -319,13 +324,13 @@ class MFA(MM):
         See Also
         --------
         MFA.objective : loss function for the optimization
-        
+
         """
         self.params_store = []
         flattened_obj, unflatten, flattened_init_params = flatten_func(
             self.objective, init_params
         )
-        
+
         def callback(flattened_params):
             params = unflatten(flattened_params)
             self.params_checker(params)

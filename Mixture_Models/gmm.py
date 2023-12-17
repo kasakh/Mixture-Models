@@ -4,12 +4,13 @@ import autograd.numpy as np
 import autograd.scipy.stats.multivariate_normal as mvn
 from sklearn.cluster import KMeans
 
+
 class GMM(MM):
     """Class for Gaussian mixture models (GMMs).
 
     Inherits from the base MM class, and is instantiated the same way.
     It also has the following additional attributes:
-    
+
     Attributes
     ----------
     num_freeparam : int
@@ -17,7 +18,7 @@ class GMM(MM):
     params_store : list
         Initialized after calling method `fit`.
         Contains the history of fitted parameters across iterations.
-    
+
     Methods
     -------
     init_params(num_components, scale=1.0)
@@ -26,7 +27,7 @@ class GMM(MM):
         Runs optimization routine with the given initialization.
     labels(data, params)
         Returns 'hard' cluster assignments for given data, based on fitted parameters.
-    
+
     See Also
     --------
     GMM_Constrainted : Child class with constrained common variance.
@@ -43,10 +44,10 @@ class GMM(MM):
             - (0 * self.kl_div_tot(params["means"], kl_cov))
             - (-0.0 * self.kl_div_inverse_tot(params["means"], kl_cov))
         )
-    
+
     def alt_gmm_log_likelihood(self, params, data):
         """Calculates the log-likelihood for the GMM model.
-        
+
         Notes
         -----
         The input `params` is to be a dictionary of named parameters,
@@ -93,7 +94,7 @@ class GMM(MM):
         num_components : int
             Number of mixture components (i.e. clusters) to be fitted.
             Must be a positive integer :math:`\geq` number of input datapoints.
-        
+
         scale : float, optional
             Scale parameter, defaults to 1.
             Corresponds roughly to the amount of heterogeneity between clusters.
@@ -109,7 +110,7 @@ class GMM(MM):
               Real matrix of shape (num_components, D)
             sqrt_covs
               Vector of real matrices of shape (num_components, D, D)
-            
+
             where D = number of data dimensions.
 
         Other Parameters
@@ -136,35 +137,37 @@ class GMM(MM):
         # rs = npr.seed(1)
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, D) * scale,
+            "means": self.kmeans(num_components, **kwargs)
+            if use_kmeans
+            else np.random.randn(num_components, D) * scale,
             "sqrt_covs": np.zeros((num_components, D, D)) + np.eye(D),
         }
 
     def unpack_params(self, params):
         """Expands a dictionary of named parameters into a tuple.
-        
+
         Parameters
         ----------
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `GMM.init_params`.
-        
+
         Returns
         -------
         expanded_params : tuple
             A tuple of expanded model parameters,
             as can be used for calculating the model log-likelihood.
-        
+
         See Also
         --------
         GMM.init_params
         """
         normalized_log_proportions = self.log_normalize(params["log proportions"])
         return normalized_log_proportions, params["means"], params["sqrt_covs"]
-    
+
     def params_checker(self, params, nonneg=True):
         """Verifies that the model parameters are valid.
-        
+
         Parameters
         ----------
         params : dict
@@ -174,16 +177,16 @@ class GMM(MM):
             Flag to control the check for covariance matrices,
             i.e. whether they are to be merely positive semidefinite (True)
             or if positive definiteness is required (False).
-        
+
         Returns
         -------
         None
-        
+
         Raises
         ------
         AssertionError
             Upon test failure.
-        
+
         See Also
         --------
         GMM.init_params
@@ -191,14 +194,13 @@ class GMM(MM):
         D = self.num_dim
         proportions = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
-            check_dim(log_proportion,()) and check_pos(-log_proportion)
+            check_dim(log_proportion, ()) and check_pos(-log_proportion)
             proportions.append(np.exp(log_proportion))
-            check_dim(mean,(D,)) and check_finite(mean)
-            check_dim(cov_sqrt,(D,D)) and check_finite(cov_sqrt)
+            check_dim(mean, (D,)) and check_finite(mean)
+            check_dim(cov_sqrt, (D, D)) and check_finite(cov_sqrt)
             if not nonneg:
                 check_posdef(cov_sqrt.T @ cov_sqrt)
         check_probdist(np.array(proportions))
-
 
     def aic(self, params):
         """Calculates the model AIC (Akaike Information Criterion)."""
@@ -209,10 +211,10 @@ class GMM(MM):
         return np.log(
             self.num_datapoints
         ) * self.num_freeparam + 2 * self.alt_objective(params)
-    
-    def kmeans(self,num_components,**kwargs):
+
+    def kmeans(self, num_components, **kwargs):
         """Runs k-means on the data to obtain a reasonable initialization."""
-        return KMeans(num_components,**kwargs).fit(self.data).cluster_centers_
+        return KMeans(num_components, **kwargs).fit(self.data).cluster_centers_
 
     def labels(self, data, params):
         """Assigns clusters to data, based on given parameters.
@@ -227,13 +229,13 @@ class GMM(MM):
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `GMM.init_params`.
-        
+
         Returns
         -------
         labels : (..., N) ndarray
             A {1,...,num_components}-valued ndarray with as many elements as datapoints.
             Each value corresponds to a "hard" cluster assignment.
-        
+
         See Also
         --------
         GMM.init_params
@@ -241,9 +243,11 @@ class GMM(MM):
         cluster_lls = []
 
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
-            #calculate a stable version of mn
+            # calculate a stable version of mn
 
-            cluster_lls.append(log_proportion + mvn.logpdf(data, mean, cov_sqrt.T @ cov_sqrt))
+            cluster_lls.append(
+                log_proportion + mvn.logpdf(data, mean, cov_sqrt.T @ cov_sqrt)
+            )
 
         return np.argmax(np.array(cluster_lls).T, axis=1)
 
@@ -263,7 +267,7 @@ class GMM(MM):
             The optimization routine to be called.
             Must be one of the strings listed above.
         **kargs : dict, optional
-        Other parameters (passed to the `opt_routine` call). 
+        Other parameters (passed to the `opt_routine` call).
 
         Returns
         -------
@@ -273,7 +277,7 @@ class GMM(MM):
         See Also
         --------
         GMM.alt_objective : loss function for the optimization
-        
+
         """
         self.params_store = []
         flattened_obj, unflatten, flattened_init_params = flatten_func(
@@ -282,7 +286,7 @@ class GMM(MM):
 
         def callback(flattened_params):
             params = unflatten(flattened_params)
-            self.params_checker(params,nonneg=False)
+            self.params_checker(params, nonneg=False)
             self.report_likelihood(self.likelihood(params))
             self.params_store.append(params)
 

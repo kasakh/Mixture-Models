@@ -8,16 +8,17 @@ They are also used in testing, but have been moved into userspace.
 
 import autograd.numpy as np
 
-def check_dim(ndarray,expected):
+
+def check_dim(ndarray, expected):
     """Verifies that a given ndarray has the expected dimensions.
-    
+
     Parameters
     ----------
     ndarray
         Input to be tested.
     expected : array_like
         Expected dimensions of `ndarray.
-    
+
     Returns
     -------
     None
@@ -26,7 +27,7 @@ def check_dim(ndarray,expected):
     ------
     AssertionError
         Upon test failure.
-    
+
     Examples
     --------
     >>> x = np.arange(24).reshape((2,3,4))
@@ -38,7 +39,7 @@ def check_dim(ndarray,expected):
     assert np.shape(ndarray) == tuple(expected)
 
 
-def check_stat(ndarray, statistic, expected,**kwargs):
+def check_stat(ndarray, statistic, expected, **kwargs):
     """Verifies evaluation of an ndarray under a given unary function.
 
     Parameters
@@ -52,7 +53,7 @@ def check_stat(ndarray, statistic, expected,**kwargs):
     **kwargs : dict, optional
         Other parameters (passed to `numpy.isclose` call)
         for adjusting tolerance of the value comparison.
-    
+
     Returns
     -------
     None
@@ -61,7 +62,7 @@ def check_stat(ndarray, statistic, expected,**kwargs):
     ------
     AssertionError
         Upon test failure.
-    
+
     See Also
     --------
     numpy.isclose
@@ -73,10 +74,10 @@ def check_stat(ndarray, statistic, expected,**kwargs):
     >>> y = [np.log(i) for i in x]
     >>> check_stat(y, lambda x: sum(np.exp(x)), 1, atol=1e-04)
     """
-    assert np.isclose(statistic(ndarray),expected,**kwargs)
+    assert np.isclose(statistic(ndarray), expected, **kwargs)
 
 
-def check_element(ndarray, indices, expected,**kwargs):
+def check_element(ndarray, indices, expected, **kwargs):
     """Verify that an element of an ndarray has an expected value.
 
     Parameters
@@ -86,11 +87,11 @@ def check_element(ndarray, indices, expected,**kwargs):
     indices : array_like
         Indices of the element to be tested.
     expected
-        Expected value of the element.  
+        Expected value of the element.
     **kwargs : dict, optional
         Other parameters (passed to `numpy.isclose` call)
         for adjusting tolerance of the value comparison.
-    
+
     Returns
     -------
     None
@@ -99,7 +100,7 @@ def check_element(ndarray, indices, expected,**kwargs):
     ------
     AssertionError
         Upon test failure.
-    
+
     See Also
     --------
     numpy.isclose
@@ -110,12 +111,12 @@ def check_element(ndarray, indices, expected,**kwargs):
     >>> check_element(x, (1,2,1), 0.875)
     >>> check_element(x, [0,0,2], 0.08333, atol=1e-04)
     """
-    check_stat(ndarray,lambda x:x[tuple(indices)],expected,**kwargs)
+    check_stat(ndarray, lambda x: x[tuple(indices)], expected, **kwargs)
 
 
-def check_finite(ndarray,**kwargs):
+def check_finite(ndarray, **kwargs):
     """Verifies that an ndarray contains only finite entries.
-    
+
     In particular, it verifies that none of the entries are NANs or +/-Inf.
 
     Parameters
@@ -124,7 +125,7 @@ def check_finite(ndarray,**kwargs):
         Input to be tested.
     **kwargs : dict, optional
         Other parameters (passed to `numpy.isfinite` call).
-    
+
     Returns
     -------
     None
@@ -133,7 +134,7 @@ def check_finite(ndarray,**kwargs):
     ------
     AssertionError
         Upon test failure.
-    
+
     See Also
     --------
     numpy.isfinite
@@ -147,17 +148,17 @@ def check_finite(ndarray,**kwargs):
     >>> check_finite(x)
     >>> # check_finite(np.log(x)) ##throws an error
     """
-    assert np.all(np.isfinite(ndarray,**kwargs))
+    assert np.all(np.isfinite(ndarray, **kwargs))
 
 
 def check_square(matrix):
     """Verifies that a given matrix is square.
-    
+
     Parameters
     ----------
     matrix
         Input to be tested.
-    
+
     Returns
     -------
     None
@@ -166,7 +167,7 @@ def check_square(matrix):
     ------
     AssertionError
         Upon test failure.
-    
+
     Examples
     --------
     >>> x = np.eye(4)
@@ -174,12 +175,12 @@ def check_square(matrix):
     >>> # check_square(x.flatten()) #also throws an error for nonmatrices
     """
     n = np.shape(matrix)[0]
-    check_dim(matrix,(n,n))
+    check_dim(matrix, (n, n))
 
 
-def check_symmetric(matrix,**kwargs):
+def check_symmetric(matrix, **kwargs):
     """Verifies that a given matrix is symmetric.
-    
+
     Parameters
     ----------
     matrix
@@ -187,7 +188,7 @@ def check_symmetric(matrix,**kwargs):
     **kwargs : dict, optional
         Other parameters (passed to `numpy.isclose` call)
         for adjusting tolerance of the element comparison.
-    
+
     Returns
     -------
     None
@@ -196,7 +197,7 @@ def check_symmetric(matrix,**kwargs):
     ------
     AssertionError
         Upon test failure.
-    
+
     See Also
     --------
     numpy.isclose
@@ -209,12 +210,12 @@ def check_symmetric(matrix,**kwargs):
     >>> # check_symmetric(x.reshape((2,8))) #also throws an error for nonsquare matrices
     """
     check_square(matrix)
-    assert np.allclose(matrix,np.transpose(matrix),**kwargs)
+    assert np.allclose(matrix, np.transpose(matrix), **kwargs)
 
 
-def check_diagonal(matrix,**kwargs):
+def check_diagonal(matrix, **kwargs):
     """Verifies that a given matrix is diagonal.
-    
+
     Parameters
     ----------
     matrix
@@ -222,7 +223,7 @@ def check_diagonal(matrix,**kwargs):
     **kwargs : dict, optional
         Other parameters (passed to `numpy.isclose` call)
         for adjusting tolerance of the element comparison.
-    
+
     Returns
     -------
     None
@@ -231,11 +232,11 @@ def check_diagonal(matrix,**kwargs):
     ------
     AssertionError
         Upon test failure.
-    
+
     See Also
     --------
     numpy.isclose
-    
+
     Examples
     --------
     >>> x = np.eye(4)
@@ -244,16 +245,16 @@ def check_diagonal(matrix,**kwargs):
     >>> # check_diagonal(x.reshape((2,8))) #also throws an error for nonsquare matrices
     """
     check_square(matrix)
-    assert np.allclose(matrix,np.diag(np.diag(matrix)),**kwargs)
+    assert np.allclose(matrix, np.diag(np.diag(matrix)), **kwargs)
 
 
-def check_invertible(matrix,**kwargs):
+def check_invertible(matrix, **kwargs):
     """Verifies that a given matrix is nonsingular.
 
     This attempts to compute the condition number of the matrix,
     and checks that it is sufficiently small (i.e. < 1e+08,
     this threshold is adjustable by passing in a keyword argument 'atol').
-    
+
     Parameters
     ----------
     matrix
@@ -262,7 +263,7 @@ def check_invertible(matrix,**kwargs):
         Other parameters (passed to `numpy.isclose` call)
         for adjusting tolerance of the condition number comparison.
         Currently only the "atol" keyword is used.
-    
+
     Returns
     -------
     None
@@ -271,7 +272,7 @@ def check_invertible(matrix,**kwargs):
     ------
     AssertionError
         Upon test failure.
-    
+
     Examples
     --------
     >>> x = np.eye(4)
@@ -283,12 +284,12 @@ def check_invertible(matrix,**kwargs):
     >>> check_invertible(y, atol=1e-09)
     """
     check_square(matrix)
-    assert np.linalg.cond(matrix) < 1/kwargs.get('atol',1e-08)
+    assert np.linalg.cond(matrix) < 1 / kwargs.get("atol", 1e-08)
 
 
-def check_orthogonal(matrix,**kwargs):
+def check_orthogonal(matrix, **kwargs):
     """Verifies that a given matrix is orthogonal.
-    
+
     Parameters
     ----------
     matrix
@@ -296,7 +297,7 @@ def check_orthogonal(matrix,**kwargs):
     **kwargs : dict, optional
         Other parameters (passed to `numpy.isclose` call)
         for adjusting tolerance of the element comparison.
-    
+
     Returns
     -------
     None
@@ -305,11 +306,11 @@ def check_orthogonal(matrix,**kwargs):
     ------
     AssertionError
         Upon test failure.
-    
+
     See Also
     --------
     numpy.isclose
-    
+
     Examples
     --------
     >>> x = np.eye(4)
@@ -318,9 +319,9 @@ def check_orthogonal(matrix,**kwargs):
     >>> # check_orthogonal(x.reshape((2,8))) #also throws an error for nonsquare matrices
     >>> # check_orthogonal(np.ones((4,4))) #also throws an error for noninvertible matrices
     """
-    check_invertible(matrix,**kwargs)
+    check_invertible(matrix, **kwargs)
     prod_inv = matrix @ np.linalg.inv(matrix)
-    assert np.allclose(prod_inv,np.eye(np.shape(matrix)[0]),**kwargs)
+    assert np.allclose(prod_inv, np.eye(np.shape(matrix)[0]), **kwargs)
 
 
 def check_posdef(matrix):
@@ -328,12 +329,12 @@ def check_posdef(matrix):
 
     This test simply calls the routine `numpy.linalg.cholesky` on its input
     and reports the success of the result.
-    
+
     Parameters
     ----------
     matrix
         Input to be tested.
-    
+
     Returns
     -------
     None
@@ -342,11 +343,11 @@ def check_posdef(matrix):
     ------
     AssertionError
         Upon test failure.
-    
+
     See Also
     --------
     numpy.linalg.cholesky
-    
+
     Examples
     --------
     >>> x = np.eye(4)
@@ -372,7 +373,7 @@ def check_pos(vector, nonneg=True, atol=1e-08):
     atol : float, optional
         Small positive number indicating the allowed absolute tolerance.
         Defaults to 1e-08.
-    
+
     Returns
     -------
     None
@@ -381,7 +382,7 @@ def check_pos(vector, nonneg=True, atol=1e-08):
     ------
     AssertionError
         Upon test failure.
-    
+
     Examples
     --------
     >>> x = np.array([10**(-i) for i in range(5)])
@@ -398,7 +399,7 @@ def check_pos(vector, nonneg=True, atol=1e-08):
         assert np.all(vector > -atol)
 
 
-def check_posdef_eig(matrix,semidef=True,atol=1e-08):
+def check_posdef_eig(matrix, semidef=True, atol=1e-08):
     """Verifies that a matrix is positive definite/semidefinite (by computing eigenvalues).
 
     Parameters
@@ -411,7 +412,7 @@ def check_posdef_eig(matrix,semidef=True,atol=1e-08):
     atol : float, optional
         Small positive number indicating the allowed absolute tolerance
         for the largest eigenvalue. Defaults to 1e-08.
-    
+
     Returns
     -------
     None
@@ -420,7 +421,7 @@ def check_posdef_eig(matrix,semidef=True,atol=1e-08):
     ------
     AssertionError
         Upon test failure.
-    
+
     Examples
     --------
     >>> x = np.array([10**(-i) for i in range(5)])
@@ -430,10 +431,10 @@ def check_posdef_eig(matrix,semidef=True,atol=1e-08):
     >>> check_pos(np.diag(y))
     >>> check_pos(np.diag(y), nonneg=False, atol=1e-07)
     """
-    check_pos(np.linalg.eigvalsh(matrix),semidef,atol)
+    check_pos(np.linalg.eigvalsh(matrix), semidef, atol)
 
 
-def check_probdist(vector,atol=1e-04):
+def check_probdist(vector, atol=1e-04):
     """Verifies that a vector is a probability distribution.
 
     Parameters
@@ -443,7 +444,7 @@ def check_probdist(vector,atol=1e-04):
     atol : float, optional
         Small positive number indicating the allowed absolute tolerance
         for the sum of entries from 1. Defaults to 1e-08.
-    
+
     Returns
     -------
     None
@@ -452,11 +453,11 @@ def check_probdist(vector,atol=1e-04):
     ------
     AssertionError
         Upon test failure.
-    
+
     Examples
     --------
     >>> x = np.array([1/3, 1/2, 0, 1/6])
     >>> check_probdist(x)
     """
-    check_pos(vector,True)
-    assert np.isclose(sum(vector),1,atol=atol)
+    check_pos(vector, True)
+    assert np.isclose(sum(vector), 1, atol=atol)

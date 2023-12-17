@@ -2,6 +2,7 @@ from .gmm import *
 from autograd.scipy.special import gammaln
 import autograd.numpy as np
 
+
 class TMM(GMM):
     """
     Class for the mixture model of (multivariate) t-distributions.
@@ -19,7 +20,7 @@ class TMM(GMM):
         num_components : int
             Number of mixture components (i.e. clusters) to be fitted.
             Must be a positive integer :math:`\geq` number of input datapoints.
-        
+
         scale : float, optional
             Scale parameter, defaults to 1.
             Corresponds roughly to the amount of heterogeneity between clusters.
@@ -37,9 +38,9 @@ class TMM(GMM):
               Real matrix of shape (D, D)
             log_dofs
               Real vector of shape (num_components)
-            
+
             where D = number of data dimensions.
-        
+
         Other Parameters
         ----------------
         use_kmeans : bool, optional
@@ -58,32 +59,33 @@ class TMM(GMM):
         """
         self.num_clust_checker(num_components)
         D = self.num_dim
-        
-        self.num_freeparam = num_components * (1+D+0.5*D*(D+1)+1)-1
+
+        self.num_freeparam = num_components * (1 + D + 0.5 * D * (D + 1) + 1) - 1
 
         return {
             "log proportions": np.random.randn(num_components) * scale,
-            "means": self.kmeans(num_components,**kwargs) if use_kmeans else np.random.randn(num_components, D) * scale,
+            "means": self.kmeans(num_components, **kwargs)
+            if use_kmeans
+            else np.random.randn(num_components, D) * scale,
             "sqrt_covs": np.zeros((num_components, D, D)) + np.eye(D),
             "log_dofs": np.random.randn(num_components),
-            
         }
 
     def unpack_params(self, params):
         """Expands a dictionary of named parameters into a tuple.
-        
+
         Parameters
         ----------
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `TMM.init_params`.
-        
+
         Returns
         -------
         expanded_params : tuple
             A tuple of expanded model parameters,
             as can be used for calculating the model log-likelihood.
-        
+
         See Also
         --------
         TMM.init_params
@@ -94,7 +96,7 @@ class TMM(GMM):
 
     def params_checker(self, params, nonneg=True):
         """Verifies that the model parameters are valid.
-        
+
         Parameters
         ----------
         params : dict
@@ -104,16 +106,16 @@ class TMM(GMM):
             Flag to control the check for covariance matrices,
             i.e. whether they are to be merely positive semidefinite (True)
             or if positive definiteness is required (False).
-        
+
         Returns
         -------
         None
-        
+
         Raises
         ------
         AssertionError
             Upon test failure.
-        
+
         See Also
         --------
         TMM.init_params
@@ -121,18 +123,18 @@ class TMM(GMM):
         D = self.num_dim
         proportions = []
         for log_proportion, mean, cov_sqrt, dof in zip(*self.unpack_params(params)):
-            check_dim(log_proportion,()) and check_pos(-log_proportion)
+            check_dim(log_proportion, ()) and check_pos(-log_proportion)
             proportions.append(np.exp(log_proportion))
-            check_dim(mean,(D,)) and check_finite(mean)
-            check_dim(cov_sqrt,(D,D)) and check_finite(cov_sqrt)
+            check_dim(mean, (D,)) and check_finite(mean)
+            check_dim(cov_sqrt, (D, D)) and check_finite(cov_sqrt)
             if not nonneg:
                 check_posdef(cov_sqrt.T @ cov_sqrt)
-            check_dim(dof,()) and check_pos(dof,nonneg)
+            check_dim(dof, ()) and check_pos(dof, nonneg)
         check_probdist(np.array(proportions))
 
     def likelihood(self, params):
         """Calculates the log-likelihood for the mixture-of-t model.
-        
+
         Notes
         -----
         The input `params` is to be a dictionary of named parameters,
@@ -164,15 +166,26 @@ class TMM(GMM):
         cluster_lls = []
         for log_proportion, mean, cov_sqrt, dof in zip(*self.unpack_params(params)):
             D = len(mean)
-            logpdf = gammaln((dof+D)/2)-gammaln(dof/2)-0.5*np.log(np.linalg.det(np.pi*dof*cov_sqrt.T @ cov_sqrt)) - 0.5*(dof+D)*np.log(1+np.sum(((self.data-mean)@np.linalg.inv(cov_sqrt))**2,axis=1)/dof)
+            logpdf = (
+                gammaln((dof + D) / 2)
+                - gammaln(dof / 2)
+                - 0.5 * np.log(np.linalg.det(np.pi * dof * cov_sqrt.T @ cov_sqrt))
+                - 0.5
+                * (dof + D)
+                * np.log(
+                    1
+                    + np.sum(
+                        ((self.data - mean) @ np.linalg.inv(cov_sqrt)) ** 2, axis=1
+                    )
+                    / dof
+                )
+            )
             cluster_lls.append(log_proportion + logpdf)
-        return np.sum(logsumexp(np.vstack(cluster_lls),axis=0))
+        return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
 
-        
     def objective(self, params):
         """Calculates the negative log-likelihood for the model."""
         return -self.likelihood(params)
-
 
     def aic(self, params):
         """Calculates the model AIC (Akaike Information Criterion)."""
@@ -180,10 +193,10 @@ class TMM(GMM):
 
     def bic(self, params):
         """Calculates the model BIC (Bayesian Information Criterion)."""
-        return np.log(
-            self.num_datapoints
-        ) * self.num_freeparam + 2 * self.objective(params)
-    
+        return np.log(self.num_datapoints) * self.num_freeparam + 2 * self.objective(
+            params
+        )
+
     def labels(self, data, params):
         """Assigns clusters to data, based on given parameters.
 
@@ -197,13 +210,13 @@ class TMM(GMM):
         params : dict
             Dictionary of named parameters, of the same format as
             the return value of `TMM.init_params`.
-        
+
         Returns
         -------
         labels : (..., N) ndarray
             A {1,...,num_components}-valued ndarray with as many elements as datapoints.
             Each value corresponds to a "hard" cluster assignment.
-        
+
         See Also
         --------
         TMM.init_params
@@ -211,10 +224,21 @@ class TMM(GMM):
         cluster_lls = []
         for log_proportion, mean, cov_sqrt, dof in zip(*self.unpack_params(params)):
             D = len(mean)
-            logpdf = gammaln((dof+D)/2)-gammaln(dof/2)-0.5*np.log(np.linalg.det(np.pi*dof*cov_sqrt.T @ cov_sqrt)) - 0.5*(dof+D)*np.log(1+np.sum(((data-mean)@np.linalg.inv(cov_sqrt))**2,axis=1)/dof)
+            logpdf = (
+                gammaln((dof + D) / 2)
+                - gammaln(dof / 2)
+                - 0.5 * np.log(np.linalg.det(np.pi * dof * cov_sqrt.T @ cov_sqrt))
+                - 0.5
+                * (dof + D)
+                * np.log(
+                    1
+                    + np.sum(((data - mean) @ np.linalg.inv(cov_sqrt)) ** 2, axis=1)
+                    / dof
+                )
+            )
             cluster_lls.append(log_proportion + logpdf)
-        return np.argmax(np.array(cluster_lls).T,axis=1)
-    
+        return np.argmax(np.array(cluster_lls).T, axis=1)
+
     def fit(self, init_params, opt_routine, **kargs):
         """Fits TMM parameters to the data of the model instance.
 
@@ -231,7 +255,7 @@ class TMM(GMM):
             The optimization routine to be called.
             Must be one of the strings listed above.
         **kargs : dict, optional
-        Other parameters (passed to the `opt_routine` call). 
+        Other parameters (passed to the `opt_routine` call).
 
         Returns
         -------
@@ -241,7 +265,7 @@ class TMM(GMM):
         See Also
         --------
         TMM.objective : loss function for the optimization
-        
+
         """
         self.params_store = []
         flattened_obj, unflatten, flattened_init_params = flatten_func(
@@ -250,7 +274,7 @@ class TMM(GMM):
 
         def callback(flattened_params):
             params = unflatten(flattened_params)
-            self.params_checker(params,nonneg=False)
+            self.params_checker(params, nonneg=False)
             self.report_likelihood(self.likelihood(params))
             self.params_store.append(params)
 

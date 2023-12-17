@@ -27,7 +27,7 @@ class MM(object):
     data : matrix
         Input data to be fitted. Must be a real matrix with finite values,
         e.g. missing values (NA, NaN), +Inf, -Inf are all forbidden.
-    
+
     Attributes
     ----------
     data
@@ -37,6 +37,7 @@ class MM(object):
         Number of observations in the data.
 
     """
+
     def __init__(self, data):
         self.data_checker(data)
         self.data = np.copy(data)
@@ -60,7 +61,7 @@ class MM(object):
         -------
         mvn_logpdf : (..., N)
             Values of the D-dimensional normal log-pdf evaluated at X.
-        
+
         Notes
         -----
         The multivariate normal probability density function is traditionally specified by
@@ -94,7 +95,6 @@ class MM(object):
         """Calculates the log-likelihood for the GMM model."""
         cluster_lls = []
         for log_proportion, mean, cov_sqrt in zip(*self.unpack_params(params)):
-
             cluster_lls.append(log_proportion + self.mvn_logpdf(data, mean, cov_sqrt))
 
         return np.sum(logsumexp(np.vstack(cluster_lls), axis=0))
@@ -122,7 +122,7 @@ class MM(object):
             alpha = np.minimum(1.0, np.exp(log_proportion) * 10)
             self.plot_ellipse(ax, mean, cov_sqrt, alpha)
         # plot_ellipse(ax, mean, cov_sqrt, alpha)
-    
+
     def draw_clusters(self, params, input_data=None):
         if input_data is None:
             input_data = self.data
@@ -131,7 +131,7 @@ class MM(object):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         self.plot_gaussian_mixture(params, ax)
-        ax.plot(input_data[:, 0], input_data[:, 1], 'k.')
+        ax.plot(input_data[:, 0], input_data[:, 1], "k.")
         plt.show()
 
     def kl_mvn(self, m0, S0, m1, S1):
@@ -394,7 +394,6 @@ class MM(object):
         opt_routine,
         **optim_params
     ):
-
         if "learning_rate" in optim_params:
             if self.rate_checker("learning_rate", optim_params["learning_rate"]):
                 learning_rate = optim_params["learning_rate"]
@@ -418,14 +417,13 @@ class MM(object):
                 beta2 = optim_params["beta2"]
         else:
             beta2 = 0.999
-        
+
         if "gamma" in optim_params:
             if self.rate_checker("gamma", optim_params["gamma"]):
                 gamma = optim_params["gamma"]
         else:
             gamma = 0.9
-        
-        
+
         if "maxiter" in optim_params:
             if isinstance(optim_params["maxiter"], int) and optim_params["maxiter"] > 0:
                 maxiter = optim_params["maxiter"]
@@ -474,7 +472,7 @@ class MM(object):
                 flattened_params,
                 grad(flattened_obj),
                 learning_rate=learning_rate,
-                gamma = gamma,
+                gamma=gamma,
                 eps=1e-5,
                 startiter=0,
                 maxiter=maxiter,

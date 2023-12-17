@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 import matplotlib.image
 
@@ -7,6 +6,7 @@ import autograd.numpy.random as npr
 from .data_mnist import *
 
 import csv
+
 
 def load_mnist():
     partial_flatten = lambda x: np.reshape(x, (x.shape[0], np.prod(x.shape[1:])))
@@ -88,7 +88,9 @@ def make_pinwheel(
 
     return np.einsum("ti,tij->tj", features, rotations)
 
+
 default_pinwheel_data = make_pinwheel(0.3, 0.05, 3, 100, 0.4)
+
 
 def load_csvdataset(file="iris"):
     """Loads example dataset from a CSV file.
@@ -99,7 +101,7 @@ def load_csvdataset(file="iris"):
     ----------
     file : string
         Name of the dataset to be returned, e.g. "iris", "wine", "Khan_train"
-    
+
     Returns
     -------
     A tuple of four elements, respectively:
@@ -113,38 +115,39 @@ def load_csvdataset(file="iris"):
         truth
             Optional: Ground truth cluster assignments, if present
             (i.e. if the dataset supports supervised training).
-    
+
     See Also
     --------
     sklearn.datasets._base.load_csv_data
 
     """
-    if file[4:].lower()!=".csv":
-        file = file+".csv"
+    if file[4:].lower() != ".csv":
+        file = file + ".csv"
 
     with open(
-        os.path.join(os.path.join(os.path.dirname(__file__),'datasets'),file)
-        ) as csv_file:
+        os.path.join(os.path.join(os.path.dirname(__file__), "datasets"), file)
+    ) as csv_file:
         data_file = csv.reader(csv_file)
         temp = next(data_file)
         n_samples = int(temp[0])
         n_features = int(temp[1])
         feature_names, target_names = None, None
         if len(temp) > 2:
-            feature_names = np.array(temp[2:(3+n_features)])
-            if len(temp) > 3+n_features:
-                target_names = np.array(temp[(3+n_features):])
-        data = np.empty((n_samples,n_features))
+            feature_names = np.array(temp[2 : (3 + n_features)])
+            if len(temp) > 3 + n_features:
+                target_names = np.array(temp[(3 + n_features) :])
+        data = np.empty((n_samples, n_features))
         truth = np.empty((n_samples,))
         has_ground_truth = None
-        for i,ir in enumerate(data_file):
-            if has_ground_truth or len(ir)==n_features+1:
-                data[i] = np.asarray(ir[:-1],dtype=np.float64)
+        for i, ir in enumerate(data_file):
+            if has_ground_truth or len(ir) == n_features + 1:
+                data[i] = np.asarray(ir[:-1], dtype=np.float64)
                 truth[i] = int(ir[-1])
                 has_ground_truth = True
             else:
-                data[i] = np.asarray(ir,dtype=np.float64)
+                data[i] = np.asarray(ir, dtype=np.float64)
         return data, feature_names, target_names, truth
+
 
 def mvn_sample(num_samples, means, sqrt_covs):
     """Samples from the (mixture of) Gaussian distribution.
@@ -161,25 +164,35 @@ def mvn_sample(num_samples, means, sqrt_covs):
 
     sqrt_covs : (...,p,p) matrix or list of such matrices
         Cholesky square root of the covariance matrix, for each of K mixture components.
-    
+
     Returns
     -------
     A matrix of shape (sum(num_samples),p)
     where the samples from clusters 1, ..., K are concatenated together.
-    (The rows are not shuffled.)  
+    (The rows are not shuffled.)
     """
     if not len(np.shape(num_samples)):
         num_samples = [num_samples]
         means = [means]
         sqrt_covs = [sqrt_covs]
     num_dim = len(means[0])
-    data = [np.dot(np.random.randn(num_samples[i],num_dim),sqrt_covs[i])+means[i] for i in range(len(num_samples))]
+    data = [
+        np.dot(np.random.randn(num_samples[i], num_dim), sqrt_covs[i]) + means[i]
+        for i in range(len(num_samples))
+    ]
     return np.concatenate(data)
-    
 
-def simulate_data(num_datapoints, num_dim, num_components,
-                  constrained, balance=1, prop_informative=1,
-                  scale=5, seed=None):
+
+def simulate_data(
+    num_datapoints,
+    num_dim,
+    num_components,
+    constrained,
+    balance=1,
+    prop_informative=1,
+    scale=5,
+    seed=None,
+):
     """Generates sample data from a Gaussian mixture model, under various constraints.
 
     Parameters
@@ -195,7 +208,7 @@ def simulate_data(num_datapoints, num_dim, num_components,
 
     constrained : bool
         If true, the covariance matrix is constrained to be diagonal.
-        If false, 
+        If false,
 
     balance : vector or float, optional
         Either a probability distribution (vector of length K)
@@ -211,7 +224,7 @@ def simulate_data(num_datapoints, num_dim, num_components,
         such that only the first max(1,prop_informative*num_dim) features are informative
         in the sense that the remaining features are replaced with random noise.
         Defaults to 1 (= all features informative).
-    
+
     Returns
     -------
     data : (num_datapoints, num_dim) matrix
@@ -222,16 +235,16 @@ def simulate_data(num_datapoints, num_dim, num_components,
         Centers for each component.
     covariances : (num_components, num_dim, num_dim) array
         Covariance matrices for each component.
-    
+
     Other Parameters
     ----------------
     scale : float, optional
         Scale parameter for the mean (feature) values. Defaults to 5.
-        
+
     seed : int64, optional
         Set the seed, if supplied.
          Defaults to None ( = unset).
-    
+
     See Also
     --------
     mvn_sample : Invokes Gaussian distribution sampler.
@@ -239,29 +252,33 @@ def simulate_data(num_datapoints, num_dim, num_components,
     """
     if seed:
         npr.seed(seed)
-    
+
     # Constructs the vector of ground truths
     if not len(np.shape(balance)):
-        balance = [int(balance*(num_components-1))]+[1]*(num_components-1)
-        balance = [p/sum(balance) for p in balance]
-    num_samples = [int(prop*num_datapoints/num_components) for prop in balance[1:]]
-    num_samples = [num_datapoints-sum(num_samples)]+num_samples
-    
-    # Construct an array of centers, of shape (K,p)
-    num_informative_features = max(1,int(num_dim*prop_informative))
-    means = np.random.rand(num_components,num_informative_features)*scale
-    means = np.array(sorted(means.tolist(),key=lambda m:sum(x*x for x in m)))
-    means = np.concatenate([means.transpose(),
-                              np.zeros((num_dim-num_informative_features,num_components))]
-                              ).transpose() #Pad uninformative features with 0s
+        balance = [int(balance * (num_components - 1))] + [1] * (num_components - 1)
+        balance = [p / sum(balance) for p in balance]
+    num_samples = [int(prop * num_datapoints / num_components) for prop in balance[1:]]
+    num_samples = [num_datapoints - sum(num_samples)] + num_samples
 
-    # Constructs the (square roots of the) covariance matrices                                
+    # Construct an array of centers, of shape (K,p)
+    num_informative_features = max(1, int(num_dim * prop_informative))
+    means = np.random.rand(num_components, num_informative_features) * scale
+    means = np.array(sorted(means.tolist(), key=lambda m: sum(x * x for x in m)))
+    means = np.concatenate(
+        [
+            means.transpose(),
+            np.zeros((num_dim - num_informative_features, num_components)),
+        ]
+    ).transpose()  # Pad uninformative features with 0s
+
+    # Constructs the (square roots of the) covariance matrices
     if constrained:
-        sqrt_covs = np.repeat([np.diag(np.random.rand(num_dim))],num_components,axis=0)
+        sqrt_covs = np.repeat(
+            [np.diag(np.random.rand(num_dim))], num_components, axis=0
+        )
     else:
-        sqrt_covs = np.random.randn(num_components,num_dim,num_dim)/np.sqrt(num_dim)
-    
-    covariances = np.array([np.dot(x,x.transpose()) for x in sqrt_covs])
+        sqrt_covs = np.random.randn(num_components, num_dim, num_dim) / np.sqrt(num_dim)
+
+    covariances = np.array([np.dot(x, x.transpose()) for x in sqrt_covs])
 
     return mvn_sample(num_samples, means, sqrt_covs), num_samples, means, covariances
-                                

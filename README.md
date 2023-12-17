@@ -1,5 +1,9 @@
 # Mixture-Models
 
+[![codecov](https://codecov.io/gh/kasakh/Mixture-Models/graph/badge.svg?token=znrlf0JRsD)](https://codecov.io/gh/kasakh/Mixture-Models)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+
 A one-stop Python library for fitting a wide range of mixture models such as Mixture of Gaussians, Students'-T, Factor-Analyzers, Parsimonious Gaussians, MCLUST, etc. 
 
 
