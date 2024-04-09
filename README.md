@@ -22,8 +22,13 @@ This library attempts to provide a seamless and unified interface for fitting a 
 ## Installation and Quick Start
 
 Installation is straightforward:
-
+    
+    # using pip
 	pip install Mixture-Models
+Alternately, 
+    
+    # using conda
+    conda install mixture-models::mixture-models
 
 #### Quick Start
 
@@ -93,6 +98,17 @@ If you're unsure where to start, check out our open issues for inspiration on th
 -------------------------------------------------------------------------------
 
 If you use this package, please consider citing our research as 
+
+
+ <blockquote>
+        <p>@article{kasa2024mixture,
+  title={Mixture-Models: a one-stop Python Library for Model-based Clustering using various Mixture Models},
+  author={Kasa, Siva Rajesh and Yijie, Hu and Kasa, Santhosh Kumar and Rajan, Vaibhav},
+  journal={arXiv preprint arXiv:2402.10229},
+  year={2024}
+}
+}</p>
+    </blockquote>
 
  <blockquote>
         <p>@article{kasa2020model,
