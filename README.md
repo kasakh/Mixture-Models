@@ -22,13 +22,8 @@ This library attempts to provide a seamless and unified interface for fitting a 
 ## Installation and Quick Start
 
 Installation is straightforward:
-    
-    # using pip
+
 	pip install Mixture-Models
-Alternately, 
-    
-    # using conda
-    conda install mixture-models::mixture-models
 
 #### Quick Start
 
