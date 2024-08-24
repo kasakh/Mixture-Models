@@ -1,4 +1,4 @@
-from .mixture_models import *
+from .mixture_models_base import *
 from .checkers import *
 import autograd.numpy as np
 import autograd.scipy.stats.multivariate_normal as mvn

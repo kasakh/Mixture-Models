@@ -7,7 +7,7 @@ with open("requirements.txt", "r") as fh:
     requirements = [line.strip() for line in fh]
 
 setuptools.setup(
-    name="Mixture_Models",
+    name="mixture_models",
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     author="Siva Rajesh Kasa",

@@ -1,4 +1,4 @@
-from Mixture_Models import *
+from mixture_models import *
 from tests import utils
 
 from sklearn.mixture import GaussianMixture

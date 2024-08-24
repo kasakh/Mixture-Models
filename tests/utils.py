@@ -1,6 +1,6 @@
 """Utility functions reused across various tests."""
 
-from Mixture_Models import checkers
+from mixture_models import checkers
 import autograd.numpy as np
 import json
 import os

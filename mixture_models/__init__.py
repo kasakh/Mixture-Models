@@ -1,4 +1,4 @@
-from .mixture_models import *
+from .mixture_models_base import *
 from .data import *
 from .gmm import *
 from .gmm_conc import *

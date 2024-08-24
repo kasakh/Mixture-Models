@@ -27,8 +27,13 @@ Installation is straightforward:
 
 #### Quick Start
 
+```python
+from mixture_models import *
+```
+
 The estimation procedure consists of 3 simple steps:
 
+```python
     ### Simulate some dummy data using the built-in function make_pinwheel
     data = make_pinwheel(radial_std=0.3, tangential_std=0.05, num_classes=3,
                         num_per_class=100, rate=0.4,rs=npr.RandomState(0))
@@ -48,14 +53,18 @@ The estimation procedure consists of 3 simple steps:
     ### STEP 3 - Learn the parameters using some optimization routine
     params_store = my_model.fit(init_params,"Newton-CG")
 
+```
+
 Once the model is trained on the data (which is a `numpy` matrix of shape `(num_datapoints, num_dim)`),
 post-hoc analysis can be performed:
 
+```python
     for params in params_store:
         print("likelihood",my_model.likelihood(params))
         print("aic,bic",my_model.aic(params),my_model.bic(params))
     
     np.array(my_model.labels(data,params_store[-1])) ## final predicted labels
+```
 
 Example notebooks are available on the [project Github repo](https://github.com/kasakh/Mixture-Models).
 

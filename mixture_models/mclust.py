@@ -1,4 +1,4 @@
-from .mixture_models import *
+from .mixture_models_base import *
 from .checkers import *
 import autograd.numpy as np
 from sklearn.cluster import KMeans
